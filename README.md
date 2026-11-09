@@ -2,6 +2,20 @@
 
 Webowy panel sterowania SVL i czterema personami AI (Astyria, Aurelius, Alex, Aria). Backend: Node.js/Express, frontend: React/Vite. Dostawcy modeli: Gemini lub Ollama.
 
+## Integracja Debian 13 System API (2026-11-09)
+
+Przeniesiony z `mmitek515-netizen/Debian_13` moduł `debian13/system` działa jako osobna, prywatna usługa Debiana 13 (Python, SQLite, terminal ograniczony polityką i diagnostyka). Ten moduł **nie jest samodzielnym jądrem ani ukończonym instalatorem ISO**.
+
+Standardowy skrypt startowy uruchamia Ollamę `llama2-uncensored:7b`, lokalny worker planistyczny, aplikację SVL oraz usługę Debian 13. Generuje tokeny wyłącznie do lokalnego `.env`:
+
+```bash
+bash scripts/start-debian13-ollama-agents.sh llama2-uncensored:7b
+curl -fsS http://127.0.0.1:3000/api/debian13/status
+bash scripts/verify-debian13-runtime.sh
+```
+
+W panelu **Misje AI** pojawia się interaktywna karta ze statusem Debian 13, SQLite, UID i modelu. Status `online` oznacza odpowiedź API, a **nie** potwierdzone działanie oryginalnych agentów, modelu ani uruchomienie obrazu systemu. Szczegóły: [docs/DEBIAN13_IMPORT.md](docs/DEBIAN13_IMPORT.md).
+
 ## Uruchomienie na Debianie 13 / Ubuntu
 
 Wymagania: Docker Engine + Docker Compose plugin.
