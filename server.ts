@@ -76,6 +76,40 @@ Zawsze odpowiadasz po polsku, niosąc pokój, rezonans emocjonalny i wsparcie.`
   }
 };
 
+const AGENT_API_URL = (process.env.AGENT_API_URL || '').replace(/\/$/, '');
+const AGENT_API_TOKEN = process.env.AGENT_API_TOKEN || '';
+
+async function localWorkerHealth() {
+  if (!AGENT_API_URL || !AGENT_API_TOKEN) {
+    return { online: false, configured: false, identityVerified: false, error: 'Lokalny worker nie jest skonfigurowany.' };
+  }
+  try {
+    const response = await fetch(`${AGENT_API_URL}/health`, {
+      headers: { Authorization: `Bearer ${AGENT_API_TOKEN}` },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!response.ok) {
+      return { online: false, configured: true, identityVerified: false, error: `Worker HTTP ${response.status}` };
+    }
+    const data = await response.json() as { model?: string; persistentQueue?: boolean; agentIdentityVerified?: boolean };
+    return {
+      online: true,
+      configured: true,
+      identityVerified: data.agentIdentityVerified === true,
+      model: data.model || '',
+      persistentQueue: data.persistentQueue === true,
+      note: 'Lokalny worker Ollama. Nie potwierdzono tożsamości oryginalnych agentów.'
+    };
+  } catch (error) {
+    return {
+      online: false,
+      configured: true,
+      identityVerified: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
 /** One timestamped spherical snapshot, collected concurrently from all registered sources. */
 type Observation = { source: string; ok: boolean; observedAt: string; durationMs: number; data?: unknown; error?: string };
 const observerSources: Record<string, () => Promise<unknown>> = {
@@ -83,7 +117,7 @@ const observerSources: Record<string, () => Promise<unknown>> = {
     const response = await fetch(OLLAMA_BASE_URL + '/api/tags', { signal: AbortSignal.timeout(4000) });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = await response.json() as { models?: Array<{ name: string }> };
-    return { online: true, models: (data.models || []).map(model => model.name), selectedModel: OLLAMA_MODEL, selectedInstalled: (data.models || []).some(model => model.name === OLLAMA_MODEL) };
+    return { online: true, models: (data.models || []).map(model => model.name), selectedModel: OLLAMA_MODEL, selectedInstalled: (data.models || []).some(model => model.name?.toLowerCase() === OLLAMA_MODEL.toLowerCase()) };
   },
   ollamaRunning: async () => {
     const response = await fetch(OLLAMA_BASE_URL + '/api/ps', { signal: AbortSignal.timeout(4000) });
@@ -92,7 +126,7 @@ const observerSources: Record<string, () => Promise<unknown>> = {
     return { runningModels: (data.models || []).map(model => model.name) };
   },
   backend: async () => ({ uptimeSeconds: Math.round(process.uptime()), nodeVersion: process.version, memory: process.memoryUsage(), geminiConfigured: Boolean(ai) }),
-  agents: async () => ({ configured: Object.keys(PERSONAS), count: Object.keys(PERSONAS).length, autonomousWorkersRunning: false })
+  agents: async () => ({ configured: Object.keys(PERSONAS), count: Object.keys(PERSONAS).length, autonomousWorkersRunning: false, localWorker: await localWorkerHealth() })
 };
 let latestSphericalSnapshot: { timestamp: string; observations: Observation[] } | null = null;
 async function sphericalSnapshot() {
@@ -111,19 +145,26 @@ async function sphericalSnapshot() {
 }
 // Presence of a persona prompt or a functioning chat model is not proof of
 // an independent autonomous agent. The authenticated bridge is not connected.
-app.get('/api/agents/status', (_req, res) => {
+app.get('/api/agents/status', async (_req, res) => {
+  const localWorker = await localWorkerHealth();
   return res.json({
     configuredPersonas: Object.keys(PERSONAS).length,
     autonomousWorkersRunning: false,
+    originalAgentIdentitiesVerified: false,
+    localWorker,
     agents: Object.entries(PERSONAS).map(([id, persona]) => ({
       id,
       name: persona.name,
-      executorStatus: 'not-connected',
-      executorConnected: false,
-      chatModelConfigured: Boolean(ai) || Boolean(process.env.OLLAMA_BASE_URL),
-      note: 'Brak uwierzytelnionego połączenia z oryginalnym agentem.'
+      executorStatus: localWorker.online ? 'local-ollama-unverified' : 'not-connected',
+      originalExecutorConnected: false,
+      localTaskWorkerAvailable: localWorker.online,
+      note: 'Persona konwersacyjna; brak potwierdzonego oryginalnego agenta.'
     }))
   });
+});
+
+app.get('/api/local-worker/status', async (_req, res) => {
+  return res.json(await localWorkerHealth());
 });
 
 app.get('/api/spaa/snapshot', async (_req, res) => res.json(await sphericalSnapshot()));
