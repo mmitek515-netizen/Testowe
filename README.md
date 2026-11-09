@@ -8,7 +8,7 @@ Wymagania: Docker Engine + Docker Compose plugin.
 
 1. Sklonuj repozytorium i przejdź do jego katalogu.
 2. Skopiuj `.env.example` do `.env` i ustaw `GEMINI_API_KEY` albo adres dostępnego serwera Ollama.
-3. Uruchom `docker compose up -d --build`.
+3. Uruchom `bash scripts/start-debian13-ollama-agents.sh llama2-uncensored:7b` (lub `docker compose up -d --build` bez workera).
 4. Otwórz `http://localhost:3000` na komputerze z Dockerem.
 5. Sprawdź `http://localhost:3000/api/health` i logi: `docker compose logs -f`.
 
@@ -16,7 +16,7 @@ Domyślnie port aplikacji jest dostępny wyłącznie na localhost. Dostęp z tel
 
 ### Ollama
 
-Domyślny adres Ollama wewnątrz kontenera: `http://host.docker.internal:11434`. Na Linuxie Ollama musi nasłuchiwać na interfejsie osiągalnym z kontenera, a dostęp do jej API należy ograniczyć zaporą sieciową. Alternatywnie ustaw `OLLAMA_BASE_URL` na adres zaufanego serwera Ollama.
+Domyślny adres Ollama w aktualnym Docker Compose: `http://ollama:11434` (prywatna sieć kontenerów). Domyślny model: `llama2-uncensored:7b`. Uruchom `bash scripts/start-debian13-ollama-agents.sh llama2-uncensored:7b`, aby skonfigurować istniejący `.env`, pobrać model i wykonać test statusu. Nie wystawiaj portu 11434 publicznie. Szczegóły: `docs/OLLAMA_DEBIAN13.md`.
 
 ### Stan implementacji
 
