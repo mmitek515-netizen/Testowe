@@ -130,6 +130,40 @@ async function readCentralSPAA<T = unknown>(route: '/sphere' | '/sphere/workers'
   return JSON.parse(raw) as T;
 }
 
+app.get('/api/spaa/mesh', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const topology = await readCentralSPAA<any>('/mesh');
+    if (!topology || !Array.isArray(topology.members) || !Array.isArray(topology.edges)) {
+      throw new Error('invalid_mesh');
+    }
+    return res.json({
+      state: 'online',
+      architecture: 'SPAA-full-mesh',
+      sphereId: typeof topology.sphereId === 'string' ? topology.sphereId : null,
+      directedLinks: topology.edges.length,
+      members: topology.members.map((w: any) => ({
+        name: String(w.name || ''),
+        online: w.online === true,
+        capabilities: Array.isArray(w.capabilities) ? w.capabilities : [],
+        pendingMessages: Math.max(0, Number(w.pendingMessages) || 0),
+        sphereId: typeof w.sphereId === 'string' ? w.sphereId : null
+      })),
+      edges: topology.edges.map((e: any) => ({
+        from: String(e.from || ''),
+        to: String(e.to || ''),
+        available: e.available === true
+      })),
+      messagesStored: Math.max(0, Number(topology.messagesStored) || 0),
+      originalAgentIdentitiesVerified: false
+    });
+  } catch {
+    return res.status(503).json({ state: 'offline', architecture: 'SPAA-full-mesh',
+      sphereId: null, directedLinks: 0, members: [], edges: [],
+      originalAgentIdentitiesVerified: false });
+  }
+});
+
 app.get('/api/spaa/sphere', async (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
