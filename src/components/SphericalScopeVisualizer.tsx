@@ -1,183 +1,112 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Eye, Shield, Globe, Play, Pause, RotateCw } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Globe2, Pause, Play, Plus, Minus, RotateCcw, Activity, Radar } from 'lucide-react';
+
+type Body = { id: string; name: string; radius: number; size: number; color: string; period: number; phase: number; type: string; distance: string; description: string };
+const bodies: Body[] = [
+  { id:'mercury',name:'Merkury',radius:54,size:3.5,color:'#a9a9a9',period:0.24,phase:1.2,type:'Planeta skalista',distance:'0,39 AU',description:'Najbliższa planeta Słońca.' },
+  { id:'venus',name:'Wenus',radius:83,size:5.5,color:'#e9ba80',period:0.62,phase:2.3,type:'Planeta skalista',distance:'0,72 AU',description:'Gęsta atmosfera i bardzo wysoka temperatura.' },
+  { id:'earth',name:'Ziemia',radius:114,size:6.5,color:'#60b9ff',period:1,phase:3.5,type:'Planeta skalista',distance:'1,00 AU',description:'Nasz świat. Jedyna znana planeta z życiem.' },
+  { id:'mars',name:'Mars',radius:148,size:5,color:'#ef7956',period:1.88,phase:0.5,type:'Planeta skalista',distance:'1,52 AU',description:'Czerwona planeta, cel badań i eksploracji.' },
+  { id:'jupiter',name:'Jowisz',radius:192,size:13,color:'#d7ad84',period:11.86,phase:4.1,type:'Gazowy olbrzym',distance:'5,20 AU',description:'Największa planeta Układu Słonecznego.' },
+  { id:'saturn',name:'Saturn',radius:237,size:11,color:'#ddc48f',period:29.46,phase:2.1,type:'Gazowy olbrzym',distance:'9,58 AU',description:'Planeta słynąca z rozległych pierścieni.' },
+  { id:'uranus',name:'Uran',radius:278,size:8,color:'#80d6e3',period:84,phase:5.4,type:'Lodowy olbrzym',distance:'19,2 AU',description:'Lodowy olbrzym o silnie nachylonej osi obrotu.' },
+  { id:'neptune',name:'Neptun',radius:317,size:8,color:'#537be6',period:164.8,phase:3.0,type:'Lodowy olbrzym',distance:'30,1 AU',description:'Najdalsza planeta Układu Słonecznego.' }
+];
+const stars = Array.from({length:125},(_,i)=>({x:(i*137.508+31)%1000,y:(i*79.17+53)%700,r:i%9===0?1.4:0.6}));
 
 export default function SphericalScopeVisualizer() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isRotating, setIsRotating] = useState(true);
-  const angleRef = useRef({ x: 0.4, y: 0.6 });
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId: number;
-
-    const render = () => {
-      if (isRotating) {
-        angleRef.current.y += 0.012;
-        angleRef.current.x += 0.004;
-      }
-
-      const width = canvas.width;
-      const height = canvas.height;
-      const cx = width / 2;
-      const cy = height / 2;
-      const radius = Math.min(width, height) * 0.38;
-
-      ctx.clearRect(0, 0, width, height);
-
-      // Background glow
-      const radialGlow = ctx.createRadialGradient(cx, cy, 5, cx, cy, radius * 1.3);
-      radialGlow.addColorStop(0, 'rgba(14, 165, 233, 0.15)');
-      radialGlow.addColorStop(0.7, 'rgba(99, 102, 241, 0.05)');
-      radialGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = radialGlow;
-      ctx.fillRect(0, 0, width, height);
-
-      // 3D rotation projection helper
-      const project = (x: number, y: number, z: number) => {
-        // Rotate around Y
-        const cosY = Math.cos(angleRef.current.y);
-        const sinY = Math.sin(angleRef.current.y);
-        const x1 = x * cosY - z * sinY;
-        const z1 = x * sinY + z * cosY;
-
-        // Rotate around X
-        const cosX = Math.cos(angleRef.current.x);
-        const sinX = Math.sin(angleRef.current.x);
-        const y2 = y * cosX - z1 * sinX;
-        const z2 = y * sinX + z1 * cosX;
-
-        // Perspective
-        const scale = 300 / (300 + z2);
-        return {
-          px: cx + x1 * scale,
-          py: cy + y2 * scale,
-          z: z2,
-        };
-      };
-
-      // Draw latitude circles
-      const latitudes = [-0.6, -0.3, 0, 0.3, 0.6];
-      ctx.lineWidth = 1;
-
-      latitudes.forEach((latFactor) => {
-        const rLat = radius * Math.sqrt(Math.max(0, 1 - latFactor * latFactor));
-        const yVal = radius * latFactor;
-        const steps = 36;
-        ctx.beginPath();
-        for (let i = 0; i <= steps; i++) {
-          const theta = (i / steps) * Math.PI * 2;
-          const x = rLat * Math.cos(theta);
-          const z = rLat * Math.sin(theta);
-          const p = project(x, yVal, z);
-          if (i === 0) ctx.moveTo(p.px, p.py);
-          else ctx.lineTo(p.px, p.py);
-        }
-        ctx.strokeStyle = latFactor === 0 ? 'rgba(56, 189, 248, 0.6)' : 'rgba(148, 163, 184, 0.2)';
-        ctx.stroke();
-      });
-
-      // Draw longitude circles
-      const longitudes = [0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4];
-      longitudes.forEach((lon) => {
-        const steps = 40;
-        ctx.beginPath();
-        for (let i = 0; i <= steps; i++) {
-          const phi = (i / steps) * Math.PI * 2;
-          const x = radius * Math.cos(phi) * Math.cos(lon);
-          const y = radius * Math.sin(phi);
-          const z = radius * Math.cos(phi) * Math.sin(lon);
-          const p = project(x, y, z);
-          if (i === 0) ctx.moveTo(p.px, p.py);
-          else ctx.lineTo(p.px, p.py);
-        }
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.25)';
-        ctx.stroke();
-      });
-
-      // Draw Principal Axes (PXYZ)
-      const axisLen = radius * 1.35;
-      const origin = project(0, 0, 0);
-
-      const axes = [
-        { label: 'P(X)', pt: project(axisLen, 0, 0), color: '#38bdf8' },
-        { label: 'P(Y)', pt: project(0, -axisLen, 0), color: '#a855f7' },
-        { label: 'P(Z)', pt: project(0, 0, axisLen), color: '#34d399' },
-      ];
-
-      axes.forEach((axis) => {
-        ctx.beginPath();
-        ctx.moveTo(origin.px, origin.py);
-        ctx.lineTo(axis.pt.px, axis.pt.py);
-        ctx.strokeStyle = axis.color;
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
-
-        ctx.fillStyle = axis.color;
-        ctx.font = '10px monospace';
-        ctx.fillText(axis.label, axis.pt.px + 4, axis.pt.py - 4);
-      });
-
-      // Core anchor point
-      ctx.beginPath();
-      ctx.arc(origin.px, origin.py, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#38bdf8';
-      ctx.fill();
-
-      animId = requestAnimationFrame(render);
+  const [selected,setSelected]=useState('earth');
+  const [zoom,setZoom]=useState(1);
+  const [running,setRunning]=useState(true);
+  const [elapsed,setElapsed]=useState(0);
+  const [snapshot,setSnapshot]=useState<any>(null);
+  const [statusError,setStatusError]=useState('');
+  useEffect(()=>{
+    if(!running)return;
+    const timer=window.setInterval(()=>setElapsed(t=>t+0.012),80);
+    return()=>window.clearInterval(timer);
+  },[running]);
+  useEffect(()=>{
+    let active=true;
+    const update=async()=>{
+      try {
+        const response=await fetch('/api/spaa/last');
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const data=await response.json();
+        if(active){setSnapshot(data);setStatusError('');}
+      } catch(e) { if(active)setStatusError('Brak danych SPAA'); }
     };
-
-    render();
-
-    return () => {
-      cancelAnimationFrame(animId);
-    };
-  }, [isRotating]);
-
+    void update();
+    const timer=window.setInterval(()=>void update(),15000);
+    return()=>{active=false;window.clearInterval(timer);};
+  },[]);
+  const current=useMemo(()=>bodies.find(b=>b.id===selected) || bodies[2],[selected]);
+  const points=useMemo(()=>bodies.map(b=>{
+    const angle=b.phase+elapsed/Math.sqrt(b.period);
+    return {...b,x:500+b.radius*Math.cos(angle),y:350+b.radius*0.66*Math.sin(angle)};
+  }),[elapsed]);
+  const observations=Array.isArray(snapshot?.observations)?snapshot.observations:[];
+  const ok=observations.filter((o:any)=>o.ok).length;
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/80 p-5 shadow-lg backdrop-blur-md flex flex-col justify-between">
-      <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
-        <div className="flex items-center gap-2">
-          <Globe className="w-5 h-5 text-indigo-400" />
+    <section className="rounded-2xl overflow-hidden border border-cyan-500/25 bg-[#060c1c] shadow-2xl">
+      <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-cyan-500/20 bg-[#091429]">
+        <div className="flex items-center gap-3">
+          <Globe2 className="w-6 h-6 text-cyan-400"/>
           <div>
-            <h4 className="text-sm font-semibold text-white">
-              VisualScope: Spherical-PXYZ
-            </h4>
-            <p className="text-[11px] text-neutral-400 font-mono">
-              Tryb: CAŁOŚĆ | Geometria izolacji tożsamości
-            </p>
+            <h3 className="text-base sm:text-lg tracking-[.12em] font-semibold text-cyan-100">GALACTIC NAVIGATION · SOL</h3>
+            <p className="text-[11px] text-cyan-400/70 font-mono">UKŁAD SŁONECZNY / MAPA TAKTYCZNA / SPAA 360°</p>
           </div>
         </div>
-
-        <button
-          onClick={() => setIsRotating(!isRotating)}
-          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
-          title={isRotating ? 'Zatrzymaj rotację' : 'Uruchom rotację'}
-        >
-          {isRotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={()=>setZoom(z=>Math.min(2.4,z+0.2))} aria-label="Przybliż" className="p-2 rounded-lg border border-cyan-500/30 hover:bg-cyan-500/20"><Plus size={17}/></button>
+          <button onClick={()=>setZoom(z=>Math.max(.65,z-.2))} aria-label="Oddal" className="p-2 rounded-lg border border-cyan-500/30 hover:bg-cyan-500/20"><Minus size={17}/></button>
+          <button onClick={()=>setRunning(v=>!v)} aria-label={running?'Zatrzymaj animację':'Wznów animację'} className="p-2 rounded-lg border border-cyan-500/30 hover:bg-cyan-500/20">{running?<Pause size={17}/>:<Play size={17}/>}</button>
+          <button onClick={()=>{setZoom(1);setElapsed(0);setSelected('earth');}} aria-label="Resetuj widok" className="p-2 rounded-lg border border-cyan-500/30 hover:bg-cyan-500/20"><RotateCcw size={17}/></button>
+        </div>
+      </header>
+      <div className="relative bg-[#030916]">
+        <svg viewBox="0 0 1000 700" role="img" aria-label="Interaktywna mapa Układu Słonecznego z planetami i orbitami" className="w-full h-auto min-h-[290px] max-h-[660px] touch-manipulation">
+          <defs>
+            <radialGradient id="solar-background"><stop offset="0%" stopColor="#11274b"/><stop offset="100%" stopColor="#030916"/></radialGradient>
+            <radialGradient id="solar-star"><stop offset="0%" stopColor="#fff8d5"/><stop offset="48%" stopColor="#f8b64a"/><stop offset="100%" stopColor="#ad4e1c"/></radialGradient>
+            <filter id="solar-glow"><feGaussianBlur stdDeviation="9"/></filter>
+          </defs>
+          <rect width="1000" height="700" fill="url(#solar-background)"/>
+          {stars.map((s,i)=><circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#b4d7ff" opacity={i%4===0?.7:.28}/>)}
+          <g transform={`translate(500 350) scale(${zoom}) translate(-500 -350)`}>
+            {bodies.map(b=><ellipse key={b.id} cx="500" cy="350" rx={b.radius} ry={b.radius*.66} stroke="#3c7899" strokeOpacity=".37" strokeWidth="1.2" strokeDasharray="3 5" fill="none"/>)}
+            <circle cx="500" cy="350" r="31" fill="#f8ae42" opacity=".23" filter="url(#solar-glow)"/>
+            <circle cx="500" cy="350" r="18" fill="url(#solar-star)" stroke="#ffe1a0" strokeWidth="1.5"/>
+            <text x="500" y="386" textAnchor="middle" fontSize="13" fill="#ffe6a0" letterSpacing="2">SŁOŃCE</text>
+            {points.map(b=><g key={b.id} onClick={()=>setSelected(b.id)} style={{cursor:'pointer'}} role="button" tabIndex={0} aria-label={`Wybierz ${b.name}`} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelected(b.id);}}}>
+              {selected===b.id&&<circle cx={b.x} cy={b.y} r={b.size+12} stroke="#67e8f9" strokeWidth="1.5" strokeDasharray="4 3" fill="#22d3ee" fillOpacity=".09"/>}
+              <circle cx={b.x} cy={b.y} r={Math.max(13,b.size+6)} fill="transparent"/>
+              <circle cx={b.x} cy={b.y} r={b.size} fill={b.color} stroke="#d9eaff" strokeOpacity=".55"/>
+              {b.id==='saturn'&&<ellipse cx={b.x} cy={b.y} rx="20" ry="7" stroke="#ddc48f" strokeWidth="2" fill="none" transform={`rotate(-22 ${b.x} ${b.y})`}/>}
+              <text x={b.x+12} y={b.y-12} fill={selected===b.id?'#a5f3fc':'#a9bfd8'} fontSize="13" fontWeight={selected===b.id?700:400}>{b.name}</text>
+            </g>)}
+          </g>
+          <text x="24" y="32" fill="#70c5e9" fontSize="12" letterSpacing="3">SYSTEM SOL · MAPA POGLĄDOWA</text>
+          <text x="24" y="680" fill="#6e8aa5" fontSize="11">Odległości i rozmiary nie są w skali · animacja ilustracyjna</text>
+        </svg>
+        <div className="absolute right-3 top-3 rounded-lg border border-cyan-500/20 bg-[#071527]/90 px-3 py-2 text-[10px] font-mono text-cyan-300">ZOOM {Math.round(zoom*100)}%</div>
       </div>
-
-      <div className="relative flex items-center justify-center my-2">
-        <canvas
-          ref={canvasRef}
-          width={240}
-          height={200}
-          className="w-full max-w-[240px] h-[200px]"
-        />
-        <div className="absolute bottom-1 right-2 text-[10px] font-mono text-neutral-500 bg-black/40 px-2 py-0.5 rounded">
-          P-XYZ 360°
+      <div className="grid grid-cols-1 md:grid-cols-2 border-t border-cyan-500/20">
+        <div className="p-4 sm:p-5 border-b md:border-b-0 md:border-r border-cyan-500/20">
+          <div className="text-[10px] uppercase tracking-[.22em] text-cyan-400 mb-2">Wybrany obiekt</div>
+          <h4 className="text-xl font-semibold text-white">{current.name}</h4>
+          <p className="text-sm text-slate-400 mt-1">{current.type} · {current.distance} od Słońca</p>
+          <p className="text-sm text-slate-300 mt-3">{current.description}</p>
+          <div className="flex flex-wrap gap-2 mt-4">{bodies.map(b=><button key={b.id} onClick={()=>setSelected(b.id)} className={`text-xs px-2.5 py-1.5 rounded-md border ${selected===b.id?'border-cyan-400 bg-cyan-500/20 text-cyan-100':'border-slate-700 text-slate-400 hover:border-cyan-700'}`}>{b.name}</button>)}</div>
+        </div>
+        <div className="p-4 sm:p-5">
+          <div className="flex items-center gap-2 text-cyan-300 text-xs uppercase tracking-widest"><Radar size={16}/> Sferyczna telemetria SPAA</div>
+          <div className="flex items-center gap-2 mt-3 text-sm text-slate-300"><Activity size={15}/>{observations.length? `${ok}/${observations.length} źródeł odpowiada`:'Oczekiwanie na pomiar backendu'}</div>
+          <p className="text-xs text-slate-500 mt-2">{snapshot?.timestamp?'Ostatni pomiar: '+new Date(snapshot.timestamp).toLocaleString('pl-PL'):'Brak zapisanego pomiaru'}{statusError?' · '+statusError:''}</p>
+          <div className="space-y-2 mt-3">{observations.map((o:any)=><div key={o.source} className="flex justify-between gap-3 text-xs rounded-md bg-slate-900/70 border border-slate-800 p-2"><span className="text-slate-300">{o.source}</span><span className={o.ok?'text-emerald-400':'text-rose-400'}>{o.ok?'ONLINE':'BRAK ODPOWIEDZI'}</span></div>)}</div>
+          <p className="text-[11px] text-slate-500 mt-3">Mapa planet jest wizualizacją. Telemetria pochodzi z rzeczywistych pomiarów backendu, gdy jest dostępna.</p>
         </div>
       </div>
-
-      <div className="p-2.5 rounded-lg bg-neutral-950 border border-neutral-800/80 text-[11px] font-mono text-neutral-400 flex items-center justify-between">
-        <span>render: <strong className="text-emerald-400">TRUE</strong></span>
-        <span>armor: <strong className="text-cyan-400">MAXIMUM</strong></span>
-        <span>root: <strong className="text-purple-400">364_OMNIKLUCZ</strong></span>
-      </div>
-    </div>
+    </section>
   );
 }
