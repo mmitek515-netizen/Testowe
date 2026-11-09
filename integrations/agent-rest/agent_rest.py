@@ -33,6 +33,7 @@ DEBIAN_TOKEN = os.getenv("DEBIAN13_API_TOKEN", "")
 BACKEND = os.getenv("SPAA_BACKEND_URL", "http://ai-linux-control:3000").rstrip("/")
 TOKEN = os.getenv("AGENT_API_TOKEN", "")
 PORT = int(os.getenv("AGENT_API_PORT", "8091"))
+BIND = os.getenv("AGENT_API_HOST", "127.0.0.1")
 DB_PATH = os.getenv("AGENT_DB_PATH", "/data/agent_tasks.sqlite3")
 REFRESH_SECONDS = max(5, int(os.getenv("SPAA_REFRESH_SECONDS", "15")))
 DB_LOCK = threading.RLock()
@@ -420,7 +421,7 @@ def main():
     for agent in AGENTS:
         threading.Thread(target=worker_loop, args=(agent,), name="spaa-" + agent,
                          daemon=True).start()
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    ThreadingHTTPServer((BIND, PORT), Handler).serve_forever()
 
 
 if __name__ == "__main__":

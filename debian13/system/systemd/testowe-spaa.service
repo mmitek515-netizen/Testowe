@@ -1,0 +1,40 @@
+[Unit]
+Description=Testowe SPAA spherical/polymorphic/asymmetric/async worker daemon
+After=network-online.target debian13-system.service
+Wants=network-online.target
+Requires=debian13-system.service
+
+[Service]
+Type=simple
+User=debian13
+Group=debian13
+EnvironmentFile=/etc/debian13/system.env
+Environment=AGENT_DB_PATH=/var/lib/debian13/workspace/spaa_tasks.sqlite3
+Environment=AGENT_API_HOST=127.0.0.1
+Environment=AGENT_API_PORT=8091
+Environment=OLLAMA_BASE_URL=http://127.0.0.1:11434
+Environment=DEBIAN13_SYSTEM_API_URL=http://127.0.0.1:8080
+Environment=SPAA_BACKEND_URL=http://127.0.0.1:3000
+Environment=SPAA_REFRESH_SECONDS=15
+WorkingDirectory=/var/lib/debian13/workspace
+ExecStart=/usr/bin/python3 /usr/local/lib/debian13/system/spaa_daemon.py
+Restart=on-failure
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/debian13/workspace
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+MemoryMax=1G
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target

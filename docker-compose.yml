@@ -41,6 +41,7 @@ services:
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:-}
       AGENT_MODEL: ${OLLAMA_MODEL:-llama2-uncensored:7b}
       AGENT_API_PORT: "8091"
+      AGENT_API_HOST: 0.0.0.0  # only on the private Compose network; no public ports
       AGENT_DB_PATH: /data/agent_tasks.sqlite3
       OLLAMA_BASE_URL: http://ollama:11434
       DEBIAN13_SYSTEM_API_URL: http://debian13-system:8080
