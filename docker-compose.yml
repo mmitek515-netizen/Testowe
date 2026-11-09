@@ -26,6 +26,33 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["ollama pull ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}"]
 
+  # Optional local, persistent Ollama task worker imported from AI System Linux.
+  # It is NOT authenticated as any of the four original external agents.
+  agent-rest:
+    profiles: ["agents"]
+    image: python:3.12-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["python", "-u", "integrations/agent-rest/agent_rest.py"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:-}
+      AGENT_MODEL: ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}
+      AGENT_API_PORT: "8091"
+      AGENT_DB_PATH: /data/agent_tasks.sqlite3
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - ./integrations/agent-rest:/app/integrations/agent-rest:ro
+      - agent_tasks_data:/data
+    expose:
+      - "8091"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   ai-linux-control:
     build: .
     restart: unless-stopped
@@ -44,9 +71,12 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       MISSIONS_FILE: /data/missions.json
+      AGENT_API_URL: http://agent-rest:8091
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:-}
     volumes:
       - missions_data:/data
 
 volumes:
   ollama_models:
   missions_data:
+  agent_tasks_data:
