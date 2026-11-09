@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MashyValue } from './MashyCode';
 import {
   Target,
   Users,
@@ -184,11 +185,11 @@ export default function MissionControl() {
                 Centrum Misji AI (SPAA Task Orchestrator)
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-cyan-950 border border-cyan-800 text-cyan-300">
-                Epic #1
+                Epic #<MashyValue value={1} />
               </span>
             </div>
             <p className="text-xs text-neutral-400 mt-1 max-w-2xl">
-              Oficjalny rejestr 9 zaplanowanych etapów budowy systemu Testowe. Narzędzie koordynacji dla agentów Aurelius, Alex, Astyria i Aria.
+              Oficjalny rejestr <MashyValue value={9} /> zaplanowanych etapów budowy systemu Testowe. Narzędzie koordynacji dla agentów Aurelius, Alex, Astyria i Aria.
             </p>
           </div>
         </div>
@@ -228,7 +229,7 @@ export default function MissionControl() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-bold text-rose-300">
               <AlertCircle className="w-4 h-4 text-rose-400" />
-              <span>Odmowa Uruchomienia (Kod 409: agent_not_connected)</span>
+              <span>Odmowa Uruchomienia (Kod <MashyValue value={409} />: agent_not_connected)</span>
             </div>
             <button onClick={() => setStartError(null)} className="text-rose-400 hover:text-white">
               <X className="w-4 h-4" />
@@ -294,8 +295,8 @@ export default function MissionControl() {
         {/* Left Column: Mission Cards List */}
         <div className={`${selectedMission ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-3`}>
           <div className="flex items-center justify-between text-xs text-neutral-400 px-1">
-            <span>Lista zarejestrowanych etapów ({filteredMissions.length} z {missions.length}):</span>
-            <span className="font-mono text-[11px]">Baza: 9 misji Epic #1</span>
+            <span>Lista zarejestrowanych etapów (<MashyValue value={filteredMissions.length} /> z <MashyValue value={missions.length} />):</span>
+            <span className="font-mono text-[11px]">Baza: <MashyValue value={9} /> misji Epic #<MashyValue value={1} /></span>
           </div>
 
           <div className="space-y-2.5 max-h-[620px] overflow-y-auto pr-1">
@@ -317,7 +318,7 @@ export default function MissionControl() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 rounded font-mono text-xs font-bold bg-neutral-800 text-cyan-300 border border-neutral-700">
-                        #{mission.number}
+                        #<MashyValue value={mission.number} />
                       </span>
                       <h3 className="text-sm font-semibold text-white">
                         {mission.title}
@@ -339,7 +340,7 @@ export default function MissionControl() {
                   </div>
 
                   <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed mb-3">
-                    {mission.description}
+                    <MashyValue value={mission.description} />
                   </p>
 
                   {/* Progress & Agent Assignment row */}
@@ -360,7 +361,7 @@ export default function MissionControl() {
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-400">
                         <span>Postęp:</span>
-                        <strong className="text-neutral-200">{mission.progress}%</strong>
+                        <strong className="text-neutral-200"><MashyValue value={mission.progress} />%</strong>
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-300 uppercase">
                         {mission.status}
@@ -394,7 +395,7 @@ export default function MissionControl() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="px-2 py-0.5 rounded font-mono text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
-                    ETAP #{selectedMission.number}
+                    ETAP #<MashyValue value={selectedMission.number} />
                   </span>
                   {getPriorityBadge(selectedMission.priority)}
                 </div>
@@ -416,7 +417,7 @@ export default function MissionControl() {
                 Opis Etapu / Cel Zadania:
               </span>
               <p className="text-xs text-neutral-300 leading-relaxed bg-neutral-900/60 p-3 rounded-lg border border-neutral-800">
-                {selectedMission.description}
+                <MashyValue value={selectedMission.description} />
               </p>
             </div>
 
@@ -428,7 +429,7 @@ export default function MissionControl() {
                 rel="noreferrer"
                 className="p-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 flex items-center justify-between text-cyan-300 transition-colors"
               >
-                <span>GitHub Issue #{selectedMission.issueNumber}</span>
+                <span>GitHub Issue #<MashyValue value={selectedMission.issueNumber} /></span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
               <a
@@ -437,7 +438,7 @@ export default function MissionControl() {
                 rel="noreferrer"
                 className="p-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 flex items-center justify-between text-purple-300 transition-colors"
               >
-                <span>Epic Issue #1</span>
+                <span>Epic Issue #<MashyValue value={1} /></span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>

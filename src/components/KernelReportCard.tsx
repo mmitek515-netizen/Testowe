@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Terminal, Copy, Check, Download, RefreshCw, Cpu, Activity } from 'lucide-react';
 import { StatusReport } from '../core/svlEngine';
+import { MashyValue } from './MashyCode';
+import { encodeMashy } from '../core/mashyCode';
 
 interface Props {
   report: StatusReport;
@@ -37,7 +39,7 @@ export default function KernelReportCard({ report, onRefresh }: Props) {
           </div>
           <div>
             <h3 className="font-semibold text-white text-base flex items-center gap-2">
-              System Status Report (JSON Snapshot)
+              System Status Report · MASHY-V1
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
             </h3>
             <p className="text-xs text-neutral-400 font-mono">
@@ -76,7 +78,7 @@ export default function KernelReportCard({ report, onRefresh }: Props) {
         <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800">
           <span className="text-[10px] text-neutral-500 font-mono uppercase block">Status Systemu</span>
           <span className="text-xs font-bold text-neutral-200 font-mono mt-0.5 block truncate">
-            {report.System}
+            <MashyValue value={report.System} />
           </span>
         </div>
         <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800">
@@ -88,13 +90,13 @@ export default function KernelReportCard({ report, onRefresh }: Props) {
         <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800">
           <span className="text-[10px] text-neutral-500 font-mono uppercase block">Performance</span>
           <span className="text-xs font-bold text-emerald-400 font-mono mt-0.5 block truncate">
-            {report.Performance}
+            <MashyValue value={report.Performance} />
           </span>
         </div>
         <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800">
           <span className="text-[10px] text-neutral-500 font-mono uppercase block">Compact Metric C</span>
           <span className="text-xs font-bold text-amber-300 font-mono mt-0.5 block">
-            {report.Compact_Metric_C.toFixed(6)}
+            <MashyValue value={report.Compact_Metric_C.toFixed(6)} />
           </span>
         </div>
       </div>
@@ -104,14 +106,14 @@ export default function KernelReportCard({ report, onRefresh }: Props) {
         <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-800/80 bg-neutral-950/80">
           <div className="flex items-center gap-2 text-neutral-400">
             <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[11px]">stdout / kernel_status_report.json</span>
+            <span className="text-[11px]">Podgląd Mashy · kopia i eksport zachowują JSON</span>
           </div>
           <span className="text-[10px] text-neutral-500">
             UTF-8 · Indent: 4 spaces
           </span>
         </div>
         <pre className="p-4 text-emerald-400/90 overflow-x-auto leading-relaxed select-all">
-          {jsonString}
+          {encodeMashy(jsonString)}
         </pre>
       </div>
     </div>
