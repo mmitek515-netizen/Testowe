@@ -66,6 +66,43 @@ Zawsze odpowiadasz po polsku, niosąc pokój, rezonans emocjonalny i wsparcie.`
   }
 };
 
+
+/** One timestamped spherical snapshot, collected concurrently from all registered sources. */
+type Observation = { source: string; ok: boolean; observedAt: string; durationMs: number; data?: unknown; error?: string };
+const observerSources: Record<string, () => Promise<unknown>> = {
+  ollamaModels: async () => {
+    const response = await fetch(OLLAMA_BASE_URL + '/api/tags', { signal: AbortSignal.timeout(4000) });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json() as { models?: Array<{ name: string }> };
+    return { online: true, models: (data.models || []).map(model => model.name), selectedModel: OLLAMA_MODEL, selectedInstalled: (data.models || []).some(model => model.name === OLLAMA_MODEL) };
+  },
+  ollamaRunning: async () => {
+    const response = await fetch(OLLAMA_BASE_URL + '/api/ps', { signal: AbortSignal.timeout(4000) });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json() as { models?: Array<{ name: string }> };
+    return { runningModels: (data.models || []).map(model => model.name) };
+  },
+  backend: async () => ({ uptimeSeconds: Math.round(process.uptime()), nodeVersion: process.version, memory: process.memoryUsage(), geminiConfigured: Boolean(ai) }),
+  agents: async () => ({ configured: Object.keys(PERSONAS), count: Object.keys(PERSONAS).length, autonomousWorkersRunning: false })
+};
+let latestSphericalSnapshot: { timestamp: string; observations: Observation[] } | null = null;
+async function sphericalSnapshot() {
+  const timestamp = new Date().toISOString();
+  const observations = await Promise.all(Object.entries(observerSources).map(async ([source, probe]): Promise<Observation> => {
+    const started = Date.now();
+    try {
+      const data = await probe();
+      return { source, ok: true, observedAt: new Date().toISOString(), durationMs: Date.now() - started, data };
+    } catch (err) {
+      return { source, ok: false, observedAt: new Date().toISOString(), durationMs: Date.now() - started, error: err instanceof Error ? err.message : String(err) };
+    }
+  }));
+  latestSphericalSnapshot = { timestamp, observations };
+  return latestSphericalSnapshot;
+}
+app.get('/api/spaa/snapshot', async (_req, res) => res.json(await sphericalSnapshot()));
+app.get('/api/spaa/last', (_req, res) => res.json(latestSphericalSnapshot ?? { status: 'not-collected' }));
+
 // Check Ollama Service Health
 app.post('/api/ollama/status', async (req, res) => {
   const ollamaUrl = OLLAMA_BASE_URL;
