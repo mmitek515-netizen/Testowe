@@ -128,7 +128,7 @@ async function readCentralSPAA<T = unknown>(route: '/sphere' | '/sphere/workers'
   });
   if (!response.ok) throw new Error('spaa_unavailable');
   const raw = await response.text();
-  if (raw.length > 131072) throw new Error('spaa_response_too_large');
+  if (raw.length > 1048576) throw new Error('spaa_response_too_large');
   return JSON.parse(raw) as T;
 }
 
@@ -163,6 +163,56 @@ app.get('/api/spaa/mesh', async (_req, res) => {
     return res.status(503).json({ state: 'offline', architecture: 'SPAA-full-mesh',
       sphereId: null, directedLinks: 0, members: [], edges: [],
       originalAgentIdentitiesVerified: false });
+  }
+});
+
+/** Per-service observations stay inside the authenticated central sphere.
+ * The public UI receives bounded aggregate status, never process names, argv,
+ * environments, or private service inventory.
+ */
+app.get('/api/spaa/linux', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const sphere = await readCentralSPAA<any>('/sphere');
+    if (!sphere || sphere.state !== 'collected' || !Array.isArray(sphere.observations)) {
+      throw new Error('no_sphere');
+    }
+    const summarize = (source: string) => {
+      const observation = sphere.observations.find((o: any) => o.source === source);
+      if (!observation?.ok || !observation.data) {
+        return { connected: false, error: observation?.error || 'source_not_observed' };
+      }
+      const data = observation.data;
+      return {
+        connected: true, scope: String(data.scope || ''),
+        observedAt: String(data.observedAt || ''),
+        total: Math.max(0, Number(data.total) || 0),
+        truncated: data.truncated === true,
+        counts: data.counts && typeof data.counts === 'object' ? {
+          active: Math.max(0, Number(data.counts.active) || 0),
+          inactive: Math.max(0, Number(data.counts.inactive) || 0),
+          failed: Math.max(0, Number(data.counts.failed) || 0),
+          other: Math.max(0, Number(data.counts.other) || 0),
+        } : undefined,
+        unreadable: Math.max(0, Number(data.unreadable) || 0),
+      };
+    };
+    const services = summarize('linux.systemd.services');
+    const processes = summarize('linux.procfs.processes');
+    return res.json({
+      state: services.connected && processes.connected ? 'online' :
+        services.connected || processes.connected ? 'partial' : 'offline',
+      sphereId: sphere.sphereId, observedAt: sphere.observedAt,
+      services, processes,
+      topology: 'shared-sphere-read-only',
+      note: 'Systemd units are individually represented in the internal sphere. Procfs is scoped to the running process namespace; neither source changes native Linux daemons.'
+    });
+  } catch {
+    return res.status(503).json({
+      state: 'offline', sphereId: null,
+      services: { connected: false }, processes: { connected: false },
+      note: 'Centralna sfera SPAA niedostępna.'
+    });
   }
 });
 
