@@ -665,8 +665,8 @@ const DEFAULT_SEED_MISSIONS = [
   {
     id: 'mission-02',
     number: '02',
-    title: '02 Ollama 8B chat/status',
-    description: 'Wdrożenie i diagnostyka lokalnego backendu inferencji Ollama z modelem 8B oraz obsługa fallbacku telemetrii.',
+    title: '02 Ollama 7B/8B — uruchomienie, API i telemetria',
+    description: 'Uruchomienie lokalnej Ollamy z wybranym modelem (aktualnie llama2-uncensored:7b) oraz diagnostyka i możliwość używania 8B.',
     targetAgent: 'Alex',
     assignedAgent: null,
     status: 'planned',
