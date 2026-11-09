@@ -10,6 +10,7 @@ import KernelReportCard from './components/KernelReportCard';
 import PythonSandboxCard from './components/PythonSandboxCard';
 import ForensicAnalysisModal from './components/ForensicAnalysisModal';
 import OriginalAiChatCard from './components/OriginalAiChatCard';
+import MissionControl from './components/MissionControl';
 
 export default function App() {
   // Instantiate SVL System Kernel once
@@ -17,7 +18,7 @@ export default function App() {
 
   // Reactive state to trigger UI updates when kernel internal values change
   const [revision, setRevision] = useState(0);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'topology' | 'python' | 'chat' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit'>('dashboard');
   const [showAuditModal, setShowAuditModal] = useState(false);
 
   // Topological domain coordinates
@@ -98,6 +99,13 @@ export default function App() {
         {activeTab === 'chat' && (
           <div className="space-y-6 animate-in fade-in duration-150">
             <OriginalAiChatCard />
+          </div>
+        )}
+
+        {/* Tab: Misje AI (SPAA Orchestrator 9 missions) */}
+        {activeTab === 'missions' && (
+          <div className="space-y-6 animate-in fade-in duration-150">
+            <MissionControl />
           </div>
         )}
 

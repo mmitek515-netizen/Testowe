@@ -1,9 +1,9 @@
 import React from 'react';
-import { ShieldCheck, Activity, Terminal, ShieldAlert, Cpu, MessageSquare } from 'lucide-react';
+import { ShieldCheck, Activity, Terminal, ShieldAlert, Cpu, MessageSquare, Target } from 'lucide-react';
 
 interface Props {
-  activeTab: 'dashboard' | 'topology' | 'python' | 'chat' | 'audit';
-  setActiveTab: (tab: 'dashboard' | 'topology' | 'python' | 'chat' | 'audit') => void;
+  activeTab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit';
+  setActiveTab: (tab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit') => void;
   operatorName: string;
   sysVersion: string;
   onOpenAudit: () => void;
@@ -64,7 +64,18 @@ export default function Navbar({
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
-              <span>Czat z AI (Astyria, Aurelius, Alex, Aria)</span>
+              <span>Czat z AI</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('missions')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'missions'
+                  ? 'bg-gradient-to-r from-cyan-900/70 via-indigo-900/70 to-blue-900/70 text-white border border-cyan-500/40 shadow-sm'
+                  : 'text-cyan-300 hover:text-white'
+              }`}
+            >
+              <Target className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Misje AI (9)</span>
             </button>
             <button
               onClick={() => setActiveTab('topology')}
@@ -128,6 +139,14 @@ export default function Navbar({
             }`}
           >
             Czat z AI
+          </button>
+          <button
+            onClick={() => setActiveTab('missions')}
+            className={`px-2.5 py-1 text-xs rounded-md whitespace-nowrap text-cyan-300 ${
+              activeTab === 'missions' ? 'bg-cyan-950 text-white border border-cyan-500/40' : ''
+            }`}
+          >
+            Misje AI
           </button>
           <button
             onClick={() => setActiveTab('topology')}

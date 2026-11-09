@@ -112,8 +112,14 @@ export default function OriginalAiChatCard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ollamaUrl }),
       });
-      const data = await res.json();
-      setOllamaStatus(data);
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        setOllamaStatus(data);
+      } else {
+        const rawText = await res.text();
+        setOllamaStatus({ online: false, error: `Odpowiedź serwera nie jest w formacie JSON (${res.status}): ${rawText.slice(0, 100)}` });
+      }
     } catch (e: any) {
       setOllamaStatus({ online: false, error: e.message });
     } finally {
@@ -157,8 +163,18 @@ export default function OriginalAiChatCard() {
           }),
         });
 
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
+        let data: any;
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const rawText = await response.text();
+          throw new Error(`Serwer zwrócił odpowiedź w formacie HTML (${response.status}): ${rawText.slice(0, 120)}...`);
+        }
+
+        if (!response.ok || data.error) {
+          throw new Error(data.error || `Błąd serwera (${response.status})`);
+        }
 
         const aiMsg: ChatMessage = {
           id: `ai-${Date.now()}`,
@@ -184,8 +200,18 @@ export default function OriginalAiChatCard() {
           }),
         });
 
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
+        let data: any;
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const rawText = await response.text();
+          throw new Error(`Serwer zwrócił odpowiedź w formacie HTML (${response.status}): ${rawText.slice(0, 120)}...`);
+        }
+
+        if (!response.ok || data.error) {
+          throw new Error(data.error || `Błąd serwera (${response.status})`);
+        }
 
         if (data.responses && Array.isArray(data.responses)) {
           const newAiMsgs: ChatMessage[] = data.responses.map((r: any, idx: number) => ({
