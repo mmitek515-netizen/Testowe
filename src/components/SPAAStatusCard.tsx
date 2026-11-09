@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, RefreshCw, CircleAlert, CheckCircle2 } from 'lucide-react';
+import { MashyValue } from './MashyCode';
 
 type SPAAWorker = {
   name: string;
@@ -99,9 +100,9 @@ export default function SPAAStatusCard() {
       </div>
       {connected && status?.sphere ? (
         <div className="grid gap-2 sm:grid-cols-3 rounded-lg bg-neutral-900/70 p-3 font-mono text-neutral-300">
-          <span>Sfera: {status.sphere.sphereId.slice(0, 8)}</span>
-          <span>Źródła: {status.sphere.healthySources}/{status.sphere.sourceCount}</span>
-          <span>Aktualizacja: {new Date(status.sphere.observedAt).toLocaleTimeString('pl-PL')}</span>
+          <span>Sfera: <MashyValue value={status.sphere.sphereId.slice(0, 8)} /></span>
+          <span>Źródła: <MashyValue value={status.sphere.healthySources} /> / <MashyValue value={status.sphere.sourceCount} /></span>
+          <span>Aktualizacja: <MashyValue value={new Date(status.sphere.observedAt).toLocaleTimeString('pl-PL')} /></span>
         </div>
       ) : <p className="text-amber-200">{error || 'Brak aktualnej sfery. Sprawdź kontener agent-rest.'}</p>}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -119,7 +120,7 @@ export default function SPAAStatusCard() {
               {worker.capabilities.length ? worker.capabilities.join(' · ') : 'Brak potwierdzonych funkcji'}
             </p>
             <p className="text-neutral-500 font-mono">
-              Sfera zadania: {worker.sphereId?.slice(0, 8) || 'brak'}
+              Sfera zadania: {worker.sphereId ? <MashyValue value={worker.sphereId.slice(0, 8)} /> : 'brak'}
             </p>
           </div>
         ))}
@@ -128,7 +129,7 @@ export default function SPAAStatusCard() {
         <div className="flex justify-between gap-2 flex-wrap">
           <h3 className="font-semibold text-neutral-200">Wspólna sfera · połączenia każdy z każdym</h3>
           <span className={mesh?.state === 'online' ? 'text-emerald-300' : 'text-amber-300'}>
-            {mesh?.state === 'online' ? mesh.directedLinks + '/12 kierunków skonfigurowanych' : 'Siatka niepotwierdzona'}
+            {mesh?.state === 'online' ? <><MashyValue value={mesh.directedLinks} /> / <MashyValue value={12} /> kierunków skonfigurowanych</> : 'Siatka niepotwierdzona'}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -145,7 +146,7 @@ export default function SPAAStatusCard() {
                 <span className={'block text-[11px] mt-1 ' + (member?.online ? 'text-emerald-400' : 'text-amber-300')}>
                   {member?.online ? 'Worker dostępny' : 'Niepotwierdzony'}
                 </span>
-                <span className="block text-neutral-500 mt-1">Oczekujące: {member?.pendingMessages ?? '—'}</span>
+                <span className="block text-neutral-500 mt-1">Oczekujące: {member ? <MashyValue value={member.pendingMessages} /> : '—'}</span>
               </button>
             );
           })}
@@ -160,14 +161,14 @@ export default function SPAAStatusCard() {
                 <div key={peer} className="rounded-md border border-neutral-800 p-2 font-mono">
                   <span>{selectedPeer} ⇄ {peer}</span>
                   <span className={'block mt-1 ' + (out?.available && incoming?.available ? 'text-emerald-300' : 'text-amber-300')}>
-                    {out?.available && incoming?.available ? '2/2 kierunki aktywne' : 'Trasa dostępna logicznie; połączenie niepotwierdzone'}
+                    {out?.available && incoming?.available ? <><MashyValue value={2} /> / <MashyValue value={2} /> kierunki aktywne</> : 'Trasa dostępna logicznie; połączenie niepotwierdzone'}
                   </span>
                 </div>
               );
             })}
           </div>
           <p className="text-neutral-500 text-[11px]">
-            Wspólna sfera: {mesh?.sphereId?.slice(0, 8) || 'brak'} · Zapisane przekazania: {mesh?.messagesStored ?? '—'}.
+            Wspólna sfera: {mesh?.sphereId ? <MashyValue value={mesh.sphereId.slice(0, 8)} /> : 'brak'} · Zapisane przekazania: {mesh ? <MashyValue value={mesh.messagesStored} /> : '—'}.
             Komunikacja odbywa się przez trwałą kolejkę, bez automatycznej pętli odpowiedzi.
           </p>
         </div>

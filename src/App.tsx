@@ -13,6 +13,7 @@ import OriginalAiChatCard from './components/OriginalAiChatCard';
 import MissionControl from './components/MissionControl';
 import Debian13StatusCard from './components/Debian13StatusCard';
 import SPAAStatusCard from './components/SPAAStatusCard';
+import MashyCodePanel from './components/MashyCodePanel';
 
 export default function App() {
   // Instantiate SVL System Kernel once
@@ -65,6 +66,7 @@ export default function App() {
         
         {/* Security Warning Banner for the GitHub Repository */}
         <RepoAuditBanner />
+        <MashyCodePanel />
         <Debian13StatusCard />
         <SPAAStatusCard />
 
@@ -207,7 +209,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;iex(irm &apos;https
       {/* Footer */}
       <footer className="border-t border-neutral-800/80 bg-neutral-950/60 py-4 text-center text-xs text-neutral-500 font-mono">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>SVL System Kernel v5.6.0-QuantumWheel · Operator: {kernel.operator.value}</span>
+          <span>SVL · MASHY-V1 · Operator: {kernel.operator.value}</span>
           <span className="text-neutral-400">Bezpieczne Środowisko Piaskownicy</span>
         </div>
       </footer>

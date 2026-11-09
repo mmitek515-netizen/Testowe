@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, RefreshCw, Server } from 'lucide-react';
+import { MashyValue } from './MashyCode';
 
 type RuntimeState = 'online' | 'offline' | 'not-configured';
 type DebianStatus = {
@@ -73,7 +74,7 @@ export default function Debian13StatusCard() {
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="flex items-center gap-2 text-neutral-200 font-semibold">
           <Server className="w-4 h-4 text-cyan-400" />
-          Debian 13 · System API
+          Debian <MashyValue value={13} /> · System API
           <span className={online ? 'text-emerald-400' : 'text-amber-300'}>{stateLabel}</span>
           {online ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-amber-400" />}
         </div>
@@ -84,9 +85,9 @@ export default function Debian13StatusCard() {
       </div>
       {online ? (
         <div className="grid gap-2 grid-cols-2 md:grid-cols-4 font-mono text-neutral-300">
-          <span>UID: {status?.effectiveUid ?? '?'}</span>
-          <span>SQLite: {status?.taskEntriesShown ?? 0} wpisów (maks. 100)</span>
-          <span>Workery: {status?.workersRunning ?? 0}</span>
+          <span>UID: <MashyValue value={status?.effectiveUid ?? '?'} /></span>
+          <span>SQLite: <MashyValue value={status?.taskEntriesShown ?? 0} /> wpisów (maks. <MashyValue value={100} />)</span>
+          <span>Workery: <MashyValue value={status?.workersRunning ?? 0} /></span>
           <span>Model API: {status?.modelProviderConfigured ? 'skonfigurowane' : 'brak'}</span>
         </div>
       ) : (
@@ -104,12 +105,12 @@ export default function Debian13StatusCard() {
         <span className={status?.modelInferenceVerified ? 'text-emerald-300' : 'text-neutral-400'}>
           Inferencja: {status?.modelInferenceVerified ? 'potwierdzona odpowiedź' : 'niepotwierdzona'}
         </span>
-        {status?.modelLastProbedName && status.modelInferenceVerified && <span className="text-neutral-500 font-mono">{status.modelLastProbedName}</span>}
+        {status?.modelLastProbedName && status.modelInferenceVerified && <span className="text-neutral-500 font-mono"><MashyValue value={status.modelLastProbedName} /></span>}
       </div>
       {probeMessage && <p role="status" className="text-cyan-200">{probeMessage}</p>}
       <div className="text-[11px] text-neutral-500">
         Status dotyczy usługi API, nie uruchomienia systemu z dysku. Weryfikacja tożsamości oryginalnych agentów: brak.
-        {status?.checkedAt ? ' Ostatnia próba: ' + new Date(status.checkedAt).toLocaleTimeString('pl-PL') : ''}
+        {status?.checkedAt ? <> Ostatnia próba: <MashyValue value={new Date(status.checkedAt).toLocaleTimeString('pl-PL')} /></> : ''}
       </div>
     </section>
   );
