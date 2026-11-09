@@ -64,7 +64,28 @@ export default function SphericalScopeVisualizer() {
   const agentStatus=observations.find((o:any)=>o.source==='agents');
   const configuredAgents: string[]=Array.isArray(agentStatus?.data?.configured)?agentStatus.data.configured:[];
   const agentNodes=agents.map((id,i)=>({id,x:500+Math.cos(i*Math.PI/2+.4)*375,y:350+Math.sin(i*Math.PI/2+.4)*230}));
-  const ok=observations.filter((o:any)=>o.ok).length;
+  // A successful probe is not proof that an AI worker or Ollama model is actually running.
+  const serviceState = (o: any): { healthy: boolean; label: string } => {
+    if (!o.ok) return { healthy: false, label: 'BRAK ODPOWIEDZI' };
+    if (o.source === 'agents') {
+      return o.data?.autonomousWorkersRunning === true
+        ? { healthy: true, label: 'WORKERY ONLINE' }
+        : { healthy: false, label: 'WORKERY NIEPODŁĄCZONE' };
+    }
+    if (o.source === 'ollamaModels') {
+      return o.data?.selectedInstalled === true
+        ? { healthy: true, label: 'MODEL ZAINSTALOWANY' }
+        : { healthy: false, label: 'BRAK MODELU 8B' };
+    }
+    if (o.source === 'ollamaRunning') {
+      const loaded = Array.isArray(o.data?.runningModels) ? o.data.runningModels : [];
+      return loaded.length > 0
+        ? { healthy: true, label: 'MODEL W PAMIĘCI' }
+        : { healthy: false, label: 'MODEL NIEZAŁADOWANY' };
+    }
+    return { healthy: true, label: 'ONLINE' };
+  };
+  const ok = observations.filter((o:any) => serviceState(o).healthy).length;
   return (
     <section className="rounded-2xl overflow-hidden border border-cyan-500/25 bg-[#060c1c] shadow-2xl">
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-cyan-500/20 bg-[#091429]">
@@ -132,7 +153,10 @@ export default function SphericalScopeVisualizer() {
           <div className="flex items-center gap-2 text-cyan-300 text-xs uppercase tracking-widest"><Radar size={16}/> Sferyczna telemetria SPAA</div>
           <div className="flex items-center gap-2 mt-3 text-sm text-slate-300"><Activity size={15}/>{observations.length? `${ok}/${observations.length} źródeł odpowiada`:'Oczekiwanie na pomiar backendu'}</div>
           <p className="text-xs text-slate-500 mt-2">{snapshot?.timestamp?'Ostatni pomiar: '+new Date(snapshot.timestamp).toLocaleString('pl-PL'):'Brak zapisanego pomiaru'}{statusError?' · '+statusError:''}</p>
-          <div className="space-y-2 mt-3">{observations.map((o:any)=><div key={o.source} className="flex justify-between gap-3 text-xs rounded-md bg-slate-900/70 border border-slate-800 p-2"><span className="text-slate-300">{o.source}</span><span className={o.ok?'text-emerald-400':'text-rose-400'}>{o.ok?'ONLINE':'BRAK ODPOWIEDZI'}</span></div>)}</div>
+          <div className="space-y-2 mt-3">{observations.map((o:any) => {
+            const health = serviceState(o);
+            return <div key={o.source} className="flex justify-between gap-3 text-xs rounded-md bg-slate-900/70 border border-slate-800 p-2"><span className="text-slate-300">{o.source}</span><span className={health.healthy?'text-emerald-400':'text-amber-400'}>{health.label}</span></div>;
+          })}</div>
           <div className="mt-4 rounded-lg border border-cyan-500/20 bg-[#08162a] p-3">
             <div className="text-[10px] tracking-widest text-cyan-400 uppercase">Wybrany agent · {selectedAgent}</div>
             <p className="text-sm text-slate-300 mt-2">{configuredAgents.includes(selectedAgent)?'Konfiguracja agenta wykryta w backendzie':'Brak potwierdzonej konfiguracji w ostatnim pomiarze'}</p>
