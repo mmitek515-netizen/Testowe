@@ -109,6 +109,23 @@ async function sphericalSnapshot() {
   latestSphericalSnapshot = { timestamp, observations };
   return latestSphericalSnapshot;
 }
+// Presence of a persona prompt or a functioning chat model is not proof of
+// an independent autonomous agent. The authenticated bridge is not connected.
+app.get('/api/agents/status', (_req, res) => {
+  return res.json({
+    configuredPersonas: Object.keys(PERSONAS).length,
+    autonomousWorkersRunning: false,
+    agents: Object.entries(PERSONAS).map(([id, persona]) => ({
+      id,
+      name: persona.name,
+      executorStatus: 'not-connected',
+      executorConnected: false,
+      chatModelConfigured: Boolean(ai) || Boolean(process.env.OLLAMA_BASE_URL),
+      note: 'Brak uwierzytelnionego połączenia z oryginalnym agentem.'
+    }))
+  });
+});
+
 app.get('/api/spaa/snapshot', async (_req, res) => res.json(await sphericalSnapshot()));
 app.get('/api/spaa/last', (_req, res) => res.json(latestSphericalSnapshot ?? { status: 'not-collected' }));
 function observationContext() {
