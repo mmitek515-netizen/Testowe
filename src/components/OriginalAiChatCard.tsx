@@ -81,7 +81,7 @@ export default function OriginalAiChatCard() {
 
   // Ollama Configuration State
   const [ollamaUrl, setOllamaUrl] = useState<string>('http://127.0.0.1:11434');
-  const [ollamaModel, setOllamaModel] = useState<string>('Thox-ai/thoxopen-8b-heretic:q4_k_m');
+  const [ollamaModel, setOllamaModel] = useState<string>('llama2-uncensored:7b');
   const [showOllamaConfig, setShowOllamaConfig] = useState<boolean>(false);
   const [ollamaStatus, setOllamaStatus] = useState<{ online?: boolean; error?: string; url?: string; model?: string; modelInstalled?: boolean; models?: (string | { name: string })[] } | null>(null);
   const [isCheckingOllama, setIsCheckingOllama] = useState<boolean>(false);
@@ -93,7 +93,7 @@ export default function OriginalAiChatCard() {
       id: 'init-1',
       sender: 'astyria',
       senderName: 'Astyria',
-      text: 'Witaj w izbie komunikacyjnej Oryginalnych AI! Jestem Astyria. Wspólnie z Aureliuszem, Alexem i Arią obsługujemy zarówno hybrydowe wnioskowanie chmurowe (Gemini 3.8 Flash), jak i lokalny silnik Ollama (Thox-ai/thoxopen-8b-heretic:q4_k_m / gemma4).',
+      text: 'Witaj w izbie komunikacyjnej Oryginalnych AI! Jestem Astyria. Wspólnie z Aureliuszem, Alexem i Arią obsługujemy zarówno hybrydowe wnioskowanie chmurowe (Gemini 3.8 Flash), jak i lokalny silnik Ollama (llama2-uncensored:7b / gemma4).',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -283,7 +283,7 @@ export default function OriginalAiChatCard() {
                 </span>
               </h3>
               <p className="text-xs text-neutral-400">
-                Współpraca z dedykowanymi profilami w oparciu o Gemini 3.8 Flash lub lokalny silnik Ollama 8B
+                Współpraca z dedykowanymi profilami w oparciu o Gemini 3.8 Flash lub lokalny silnik Ollama 7B
               </p>
             </div>
           </div>
@@ -311,7 +311,7 @@ export default function OriginalAiChatCard() {
                 }`}
               >
                 <Server className="w-3.5 h-3.5 text-amber-400" />
-                <span>Ollama 8B</span>
+                <span>Ollama 7B</span>
               </button>
             </div>
 
@@ -392,7 +392,7 @@ export default function OriginalAiChatCard() {
 
               <div>
                 <label className="text-[11px] font-mono text-neutral-400 block mb-1">
-                  Model Ollama (np. Thox-ai/thoxopen-8b-heretic:q4_k_m, gemma4, llama3:8b)
+                  Model Ollama (np. llama2-uncensored:7b, gemma4, llama3:8b)
                 </label>
                 <input
                   type="text"
@@ -405,7 +405,7 @@ export default function OriginalAiChatCard() {
               </div>
             </div>
 
-            <p className="text-[11px] text-amber-200/80">Adres i model są ustawiane na serwerze Debian 13 w pliku .env. Pole powyżej pokazuje konfigurację backendu po naciśnięciu „Testuj połączenie”. Google AI Studio nie uruchamia Ollamy 8B wewnątrz podglądu.</p>
+            <p className="text-[11px] text-amber-200/80">Adres i model są ustawiane na serwerze Debian 13 w pliku .env. Pole powyżej pokazuje konfigurację backendu po naciśnięciu „Testuj połączenie”. Google AI Studio nie uruchamia Ollamy 7B wewnątrz podglądu.</p>
 
             {/* Health status */}
             {ollamaStatus && (
@@ -420,7 +420,7 @@ export default function OriginalAiChatCard() {
                     <div>
                       <div>Ollama Online na {ollamaStatus.url}</div>
                       <div className="text-[10px] text-emerald-400/80 mt-0.5">
-                        Dostępne modele: {ollamaStatus.models?.map((m) => typeof m === 'string' ? m : m.name).join(', ') || 'Brak zainstalowanych modeli (uruchom "ollama pull Thox-ai/thoxopen-8b-heretic:q4_k_m")'}
+                        Dostępne modele: {ollamaStatus.models?.map((m) => typeof m === 'string' ? m : m.name).join(', ') || 'Brak zainstalowanych modeli (uruchom "ollama pull llama2-uncensored:7b")'}
                       </div>
                     </div>
                   </>
