@@ -114,6 +114,33 @@ async function localWorkerHealth() {
   }
 }
 
+/** Only the local SPAA daemon owns execution workers and authoritative sphere. */
+async function readCentralSPAA<T = unknown>(route: '/sphere' | '/sphere/workers'): Promise<T> {
+  if (!AGENT_API_URL || AGENT_API_TOKEN.length < 32) {
+    throw new Error('spaa_not_configured');
+  }
+  const response = await fetch(AGENT_API_URL + route, {
+    headers: { Authorization: 'Bearer ' + AGENT_API_TOKEN, Accept: 'application/json' },
+    redirect: 'error',
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) throw new Error('spaa_unavailable');
+  const raw = await response.text();
+  if (raw.length > 131072) throw new Error('spaa_response_too_large');
+  return JSON.parse(raw) as T;
+}
+
+app.get('/api/spaa/sphere', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const sphere = await readCentralSPAA('/sphere');
+    return res.json(sphere);
+  } catch {
+    return res.status(503).json({ state: 'unavailable', sphereId: null,
+      observations: [], message: 'Centralny demon SPAA nie jest dostępny.' });
+  }
+});
+
 /** One timestamped spherical snapshot, collected concurrently from all registered sources. */
 type Observation = { source: string; ok: boolean; observedAt: string; durationMs: number; data?: unknown; error?: string };
 const observerSources: Record<string, () => Promise<unknown>> = {
@@ -129,6 +156,7 @@ const observerSources: Record<string, () => Promise<unknown>> = {
     const data = await response.json() as { models?: Array<{ name: string }> };
     return { runningModels: (data.models || []).map(model => model.name) };
   },
+  spaaCentral: async () => await readCentralSPAA('/sphere'),
   backend: async () => ({ uptimeSeconds: Math.round(process.uptime()), nodeVersion: process.version, memory: process.memoryUsage(), geminiConfigured: Boolean(ai) }),
   agents: async () => ({ configured: Object.keys(PERSONAS), count: Object.keys(PERSONAS).length, autonomousWorkersRunning: false, localWorker: await localWorkerHealth() })
 };
@@ -190,14 +218,49 @@ async function refreshSphericalState() {
 }
 setInterval(() => { void refreshSphericalState(); }, SPAA_REFRESH_MS).unref();
 void refreshSphericalState();
-app.get('/api/spaa/status', (_req, res) => res.json({
-  enabled: true,
-  intervalMs: SPAA_REFRESH_MS,
-  collecting: sphericalRefreshRunning,
-  lastSnapshot: latestSphericalSnapshot,
-  sourceCount: Object.keys(observerSources).length,
-  note: 'Monitoring runs only while this backend process is alive.'
-}));
+app.get('/api/spaa/status', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  let state: 'online' | 'offline' = 'online';
+  let centralSphere: any = null;
+  let workers: any[] = [];
+  try {
+    const [sphere, workforce] = await Promise.all([
+      readCentralSPAA<any>('/sphere'), readCentralSPAA<any>('/sphere/workers')
+    ]);
+    if (!sphere || sphere.state !== 'collected' || !Array.isArray(sphere.observations) ||
+        !workforce || !Array.isArray(workforce.workers)) throw new Error('invalid_spaa');
+    centralSphere = {
+      sphereId: sphere.sphereId,
+      observedAt: sphere.observedAt,
+      sourceCount: sphere.sourceCount,
+      healthySources: sphere.observations.filter((o: any) => o.ok).length,
+    };
+    workers = workforce.workers.map((w: any) => ({
+      name: String(w.name || ''),
+      state: String(w.state || 'unavailable'),
+      online: w.online === true,
+      capabilities: Array.isArray(w.capabilities) ? w.capabilities : [],
+      lastSeen: w.lastSeen || null,
+      sphereId: w.sphereId || null,
+      originalIdentityVerified: false,
+    }));
+  } catch {
+    state = 'offline';
+  }
+  return res.json({
+    enabled: true,
+    state,
+    spherical: true, polymorphic: true, asymmetric: true, asynchronous: true,
+    daemon: state === 'online' ? 'spaa-spherical-worker-daemon' : 'unavailable',
+    sphere: centralSphere, workers,
+    originalAgentIdentitiesVerified: false,
+    observerIntervalMs: SPAA_REFRESH_MS,
+    collecting: sphericalRefreshRunning,
+    nodeObserverSnapshot: latestSphericalSnapshot?.timestamp || null,
+    sourceCount: Object.keys(observerSources).length,
+    note: 'Źródła tylko podłączone. Jeden centralny demon wykonawczy, oddzielny proces Node jest obserwatorem.'
+  });
+});
 
 // GET /api/ollama/status - Checks Ollama health with a 5-second timeout and honest error reporting
 async function getOllamaStatusHandler(_req: express.Request, res: express.Response) {
