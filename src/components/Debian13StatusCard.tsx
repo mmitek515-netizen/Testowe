@@ -11,6 +11,8 @@ type DebianStatus = {
   workspaceWritable?: boolean;
   modelProviderConfigured?: boolean;
   modelInferenceVerified?: boolean;
+  modelLastProbedAt?: string | null;
+  modelLastProbedName?: string | null;
   taskEntriesShown?: number;
   workersRunning?: number;
   originalAgentsVerified?: boolean;
@@ -20,6 +22,8 @@ export default function Debian13StatusCard() {
   const [status, setStatus] = useState<DebianStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [probeBusy, setProbeBusy] = useState(false);
+  const [probeMessage, setProbeMessage] = useState('');
 
   const refresh = useCallback(async () => {
     setBusy(true);
@@ -45,6 +49,21 @@ export default function Debian13StatusCard() {
     const interval = setInterval(() => { void refresh(); }, 20000);
     return () => clearInterval(interval);
   }, [refresh]);
+
+  const runProbe = async () => {
+    setProbeBusy(true);
+    setProbeMessage('');
+    try {
+      const response = await fetch('/api/debian13/probe', { method: 'POST' });
+      const data = await response.json();
+      setProbeMessage(data.message || (response.ok ? 'Test wykonany.' : 'Test nie powiódł się.'));
+      await refresh();
+    } catch (err) {
+      setProbeMessage(err instanceof Error ? err.message : 'Nie można wykonać testu modelu.');
+    } finally {
+      setProbeBusy(false);
+    }
+  };
 
   const online = status?.state === 'online';
   const stateLabel = online ? 'ONLINE' : status?.state === 'not-configured'
@@ -76,8 +95,20 @@ export default function Debian13StatusCard() {
           <span>{error || status?.message || 'Trwa sprawdzanie dostępności usługi...'}</span>
         </div>
       )}
+      <div className="flex flex-wrap gap-2 items-center">
+        <button type="button" disabled={!online || !status?.modelProviderConfigured || probeBusy}
+          onClick={() => { void runProbe(); }}
+          className="rounded-lg border border-cyan-800 px-3 py-1.5 text-cyan-200 hover:bg-cyan-950/50 disabled:opacity-40">
+          {probeBusy ? 'Trwa test Ollamy...' : 'Sprawdź odpowiedź Ollamy'}
+        </button>
+        <span className={status?.modelInferenceVerified ? 'text-emerald-300' : 'text-neutral-400'}>
+          Inferencja: {status?.modelInferenceVerified ? 'potwierdzona odpowiedź' : 'niepotwierdzona'}
+        </span>
+        {status?.modelLastProbedName && status.modelInferenceVerified && <span className="text-neutral-500 font-mono">{status.modelLastProbedName}</span>}
+      </div>
+      {probeMessage && <p role="status" className="text-cyan-200">{probeMessage}</p>}
       <div className="text-[11px] text-neutral-500">
-        Status dotyczy usługi API, nie uruchomienia systemu z dysku. Weryfikacja inferencji i tożsamości oryginalnych agentów: brak.
+        Status dotyczy usługi API, nie uruchomienia systemu z dysku. Weryfikacja tożsamości oryginalnych agentów: brak.
         {status?.checkedAt ? ' Ostatnia próba: ' + new Date(status.checkedAt).toLocaleTimeString('pl-PL') : ''}
       </div>
     </section>

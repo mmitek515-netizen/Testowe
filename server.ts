@@ -966,6 +966,11 @@ async function getDebian13Json(route: '/v1/diagnostics' | '/v1/profiles' | '/api
   return data as Record<string, any>;
 }
 
+type DebianModelProbe = { verified: boolean; checkedAt: string; model?: string };
+let latestDebianModelProbe: DebianModelProbe | null = null;
+let debianProbeInFlight = false;
+let lastDebianProbeAttemptMs = 0;
+
 app.get('/api/debian13/status', async (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const checkedAt = new Date().toISOString();
@@ -991,7 +996,9 @@ app.get('/api/debian13/status', async (_req, res) => {
       effectiveUid: typeof diag.effectiveUid === 'number' ? diag.effectiveUid : null,
       workspaceWritable: diag.workspaceWritable === true,
       modelProviderConfigured: profiles.providerConfigured === true,
-      modelInferenceVerified: false,
+      modelInferenceVerified: latestDebianModelProbe?.verified === true,
+      modelLastProbedAt: latestDebianModelProbe?.checkedAt || null,
+      modelLastProbedName: latestDebianModelProbe?.model || null,
       taskEntriesShown: tasks.tasks.length, taskEntriesLimit: 100,
       storage: tasks.storage === 'sqlite' ? 'sqlite' : 'unknown',
       workersRunning: typeof tasks.workersRunning === 'number' ? tasks.workersRunning : 0,
@@ -1005,6 +1012,62 @@ app.get('/api/debian13/status', async (_req, res) => {
       message: 'Usługa Debian 13 nie odpowiada poprawnie lub wymaga naprawy konfiguracji.',
       originalAgentsVerified: false,
     });
+  }
+});
+
+
+/** Explicit model inference check: one fixed, short prompt, no model access token in browser. */
+app.post('/api/debian13/probe', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!DEBIAN13_SYSTEM_API_URL || DEBIAN13_API_TOKEN.length < 32) {
+    return res.status(503).json({ verified: false, message: 'Usługa Debian 13 nie jest skonfigurowana.' });
+  }
+  if (debianProbeInFlight) {
+    return res.status(409).json({ verified: false, message: 'Test modelu jest już wykonywany.' });
+  }
+  const now = Date.now();
+  if (now - lastDebianProbeAttemptMs < 30000) {
+    res.setHeader('Retry-After', '30');
+    return res.status(429).json({ verified: false, message: 'Odczekaj 30 sekund przed następnym testem.' });
+  }
+  let origin: string;
+  try {
+    origin = validatedDebian13Origin();
+  } catch {
+    return res.status(503).json({ verified: false, message: 'Adres usługi Debian 13 jest nieprawidłowy.' });
+  }
+  debianProbeInFlight = true;
+  lastDebianProbeAttemptMs = now;
+  const checkedAt = new Date().toISOString();
+  try {
+    const reply = await fetch(origin + '/v1/chat', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + DEBIAN13_API_TOKEN,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ profile: 'alex', message: 'Krótki test połączenia. Odpowiedz jednym słowem: OK.' }),
+      redirect: 'error',
+      signal: AbortSignal.timeout(120000),
+    });
+    if (!reply.ok) throw new Error('upstream_unavailable');
+    const raw = await reply.text();
+    if (raw.length > 65536) throw new Error('response_too_large');
+    const payload: unknown = JSON.parse(raw);
+    if (typeof payload !== 'object' || !payload || Array.isArray(payload)) throw new Error('invalid_payload');
+    const data = payload as Record<string, unknown>;
+    if (typeof data.content !== 'string' || !data.content.trim() ||
+        typeof data.model !== 'string' || !data.model.trim()) throw new Error('invalid_reply');
+    latestDebianModelProbe = { verified: true, checkedAt, model: data.model.slice(0, 100) };
+    return res.json({ ...latestDebianModelProbe, message: 'Model rzeczywiście odpowiedział przez Debian 13 API.' });
+  } catch (error) {
+    latestDebianModelProbe = { verified: false, checkedAt };
+    console.warn('Debian 13 model probe failed:', error instanceof Error ? error.name : 'unknown');
+    return res.status(502).json({ verified: false, checkedAt,
+      message: 'Nie udało się uzyskać poprawnej odpowiedzi z modelu Ollama przez Debian 13 API.' });
+  } finally {
+    debianProbeInFlight = false;
   }
 });
 
