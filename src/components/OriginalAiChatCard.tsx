@@ -81,7 +81,7 @@ export default function OriginalAiChatCard() {
 
   // Ollama Configuration State
   const [ollamaUrl, setOllamaUrl] = useState<string>('http://127.0.0.1:11434');
-  const [ollamaModel, setOllamaModel] = useState<string>('dolphin3:8b');
+  const [ollamaModel, setOllamaModel] = useState<string>('Thox-ai/thoxopen-8b-heretic:q4_k_m');
   const [showOllamaConfig, setShowOllamaConfig] = useState<boolean>(false);
   const [ollamaStatus, setOllamaStatus] = useState<{ online?: boolean; error?: string; url?: string; model?: string; modelInstalled?: boolean; models?: (string | { name: string })[] } | null>(null);
   const [isCheckingOllama, setIsCheckingOllama] = useState<boolean>(false);
@@ -93,7 +93,7 @@ export default function OriginalAiChatCard() {
       id: 'init-1',
       sender: 'astyria',
       senderName: 'Astyria',
-      text: 'Witaj w izbie komunikacyjnej Oryginalnych AI! Jestem Astyria. Wspólnie z Aureliuszem, Alexem i Arią obsługujemy zarówno hybrydowe wnioskowanie chmurowe (Gemini 3.8 Flash), jak i lokalny silnik Ollama (dolphin3:8b / gemma4).',
+      text: 'Witaj w izbie komunikacyjnej Oryginalnych AI! Jestem Astyria. Wspólnie z Aureliuszem, Alexem i Arią obsługujemy zarówno hybrydowe wnioskowanie chmurowe (Gemini 3.8 Flash), jak i lokalny silnik Ollama (Thox-ai/thoxopen-8b-heretic:q4_k_m / gemma4).',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -392,7 +392,7 @@ export default function OriginalAiChatCard() {
 
               <div>
                 <label className="text-[11px] font-mono text-neutral-400 block mb-1">
-                  Model Ollama (np. dolphin3:8b, gemma4, llama3:8b)
+                  Model Ollama (np. Thox-ai/thoxopen-8b-heretic:q4_k_m, gemma4, llama3:8b)
                 </label>
                 <input
                   type="text"
@@ -420,7 +420,7 @@ export default function OriginalAiChatCard() {
                     <div>
                       <div>Ollama Online na {ollamaStatus.url}</div>
                       <div className="text-[10px] text-emerald-400/80 mt-0.5">
-                        Dostępne modele: {ollamaStatus.models?.map((m) => typeof m === 'string' ? m : m.name).join(', ') || 'Brak zainstalowanych modeli (uruchom "ollama pull dolphin3:8b")'}
+                        Dostępne modele: {ollamaStatus.models?.map((m) => typeof m === 'string' ? m : m.name).join(', ') || 'Brak zainstalowanych modeli (uruchom "ollama pull Thox-ai/thoxopen-8b-heretic:q4_k_m")'}
                       </div>
                     </div>
                   </>
