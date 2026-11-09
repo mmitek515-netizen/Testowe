@@ -102,6 +102,25 @@ async function sphericalSnapshot() {
 }
 app.get('/api/spaa/snapshot', async (_req, res) => res.json(await sphericalSnapshot()));
 app.get('/api/spaa/last', (_req, res) => res.json(latestSphericalSnapshot ?? { status: 'not-collected' }));
+const SPAA_REFRESH_MS = Math.max(5000, Number(process.env.SPAA_REFRESH_MS) || 15000);
+let sphericalRefreshRunning = false;
+async function refreshSphericalState() {
+  if (sphericalRefreshRunning) return;
+  sphericalRefreshRunning = true;
+  try { await sphericalSnapshot(); }
+  catch (error) { console.error('SPAA observation failed:', error); }
+  finally { sphericalRefreshRunning = false; }
+}
+setInterval(() => { void refreshSphericalState(); }, SPAA_REFRESH_MS).unref();
+void refreshSphericalState();
+app.get('/api/spaa/status', (_req, res) => res.json({
+  enabled: true,
+  intervalMs: SPAA_REFRESH_MS,
+  collecting: sphericalRefreshRunning,
+  lastSnapshot: latestSphericalSnapshot,
+  sourceCount: Object.keys(observerSources).length,
+  note: 'Monitoring runs only while this backend process is alive.'
+}));
 
 // Check Ollama Service Health
 app.post('/api/ollama/status', async (req, res) => {
