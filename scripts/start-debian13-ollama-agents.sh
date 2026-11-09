@@ -1,164 +1,73 @@
 #!/usr/bin/env bash
-# Idempotent Debian 13 bootstrap for SVL Kernel, Ollama 7B and local worker.
-# This starts a local worker, NOT a verified original external agent.
+# Idempotent launch of SPAA workers, Debian 13 and private Ollama.
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
 
 command -v docker >/dev/null 2>&1 || { echo "Docker Engine is required" >&2; exit 1; }
-docker compose version >/dev/null 2>&1 || { echo "Docker Compose v2 plugin is required" >&2; exit 1; }
+docker compose version >/dev/null 2>&1 || { echo "Docker Compose v2 is required" >&2; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "Python 3 is required for secrets" >&2; exit 1; }
+(( $# <= 1 )) || { echo "Usage: $0 [ollama-model]" >&2; exit 2; }
 
-if [[ ! -f .env ]]; then
-  cp .env.example .env
-fi
+if [[ ! -f .env ]]; then cp .env.example .env; fi
 chmod 600 .env
 
-# An explicit model argument can replace an older 8B selection in an existing .env.
-# Example: bash scripts/start-debian13-ollama-agents.sh llama2-uncensored:7b
-if (( $# > 1 )); then
-  echo "Usage: $0 [ollama-model-tag]" >&2
-  exit 2
-fi
+update_env() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" .env; then
+    local tmp
+    tmp="$(mktemp)"
+    chmod 600 "$tmp"
+    awk -v k="$key" -v v="$value" 'index($0,k"=")==1 {print k"="v; next} {print}' .env >"$tmp"
+    cat "$tmp" > .env
+    rm -f "$tmp"
+  else
+    printf '%s=%s\n' "$key" "$value" >> .env
+  fi
+}
+read_env() {
+  grep "^$1=" .env | tail -n 1 | cut -d = -f 2- || true
+}
 if [[ -n "${1:-}" ]]; then
-  requested_model="$1"
-  if [[ ! "$requested_model" =~ ^[A-Za-z0-9._/-]+:[A-Za-z0-9._-]+$ ]]; then
-    echo "Invalid Ollama model tag: $requested_model" >&2
-    exit 2
-  fi
-  if grep -q '^OLLAMA_MODEL=' .env; then
-    sed -i "s|^OLLAMA_MODEL=.*|OLLAMA_MODEL=${requested_model}|" .env
-  else
-    printf 'OLLAMA_MODEL=%s\n' "$requested_model" >> .env
-  fi
+  [[ "$1" =~ ^[A-Za-z0-9._/-]+:[A-Za-z0-9._-]+$ ]] ||
+    { echo "Invalid Ollama model tag" >&2; exit 2; }
+  update_env OLLAMA_MODEL "$1"
 fi
-
-if ! grep -Eq '^AGENT_API_TOKEN=[a-fA-F0-9]{64}$' .env; then
-  if command -v openssl >/dev/null 2>&1; then
-    token="$(openssl rand -hex 32)"
-  elif command -v python3 >/dev/null 2>&1; then
-    token="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-  else
-    echo "Need openssl or python3 to create the private worker token" >&2
-    exit 1
-  fi
-  if grep -q '^AGENT_API_TOKEN=' .env; then
-    sed -i "s/^AGENT_API_TOKEN=.*/AGENT_API_TOKEN=${token}/" .env
-  else
-    printf '\nAGENT_API_TOKEN=%s\n' "$token" >> .env
-  fi
-fi
-unset token
-
-# Private API secret for the imported Debian 13 service; never commit .env.
-if ! grep -Eq '^DEBIAN13_API_TOKEN=.{32,}"$(grep -E '^OLLAMA_MODEL=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
+model="$(read_env OLLAMA_MODEL)"
 model="${model:-llama2-uncensored:7b}"
-
-# Keep Debian 13 local chat on the selected Ollama model unless another provider
-# is explicitly configured by the operator.
-if [[ -z "$(grep -E '^MODEL_CHAT_URL=' .env | tail -n 1 | cut -d '=' -f 2-)" ]]; then
-  if grep -q '^MODEL_NAME=' .env; then
-    sed -i "s|^MODEL_NAME=.*|MODEL_NAME=${model}|" .env
-  else
-    printf '\nMODEL_NAME=%s\n' "$model" >> .env
-  fi
+if [[ ! "$model" =~ ^[A-Za-z0-9._/-]+:[A-Za-z0-9._-]+$ ]]; then
+  echo "Invalid OLLAMA_MODEL in .env" >&2; exit 2
 fi
 
-# Stage 1: Ollama must be independent of the React/Node image build.
-# If npm install fails, the user's model must still start and remain usable.
-echo "Stage 1/2: Starting private Ollama before building the web application..."
-docker compose up -d ollama
+for token_var in AGENT_API_TOKEN DEBIAN13_API_TOKEN; do
+  current="$(read_env "$token_var")"
+  if (( ${#current} < 32 )); then
+    update_env "$token_var" "$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+  fi
+done
 
-echo "Downloading/verifying model: $model"
+# The imported Debian 13 API uses the private Docker Ollama endpoint by default.
+if [[ -z "$(read_env MODEL_CHAT_URL)" ]]; then update_env MODEL_NAME "$model"; fi
+
+echo "Stage 1: start private Ollama"
+docker compose up -d ollama
 docker compose exec -T ollama ollama pull "$model"
 docker compose exec -T ollama ollama show "$model"
-docker compose exec -T ollama ollama list
-echo "Ollama is started; web app build is a separate step."
 
-# Stage 2: launch the application and optional local task worker.
-echo "Stage 2/2: Building SVL, local task worker and Debian 13 runtime..."
-if ! docker compose --profile agents --profile debian13 up -d --build ai-linux-control agent-rest debian13-system; then
-  echo >&2 "The Node/React Docker image failed to build, but Ollama should still be running."
-  echo >&2 "To inspect the actual npm error, run:"
-  echo >&2 "docker compose build --no-cache --progress=plain ai-linux-control 2>&1 | tee npm-build.log"
-  echo >&2 "Send the last lines of npm-build.log (do not include .env or access tokens)."
-  docker compose ps || true
-  exit 1
-fi
+echo "Stage 2: start Debian 13, SVL and spherical SPAA worker service"
+docker compose --profile agents --profile debian13 up -d --build \
+  debian13-system agent-rest ai-linux-control
 
-echo "Checking backend, private worker and Debian 13 service..."
-app_port="$(grep -E '^APP_PORT=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
+app_port="$(read_env APP_PORT)"
 app_port="${app_port:-3000}"
-for attempt in {1..30}; do
-  if curl --silent --fail "http://127.0.0.1:${app_port}/api/health" >/dev/null; then
-    break
-  fi
+[[ "$app_port" =~ ^[0-9]{1,5}$ ]] || { echo "APP_PORT must be numeric" >&2; exit 2; }
+
+echo "Checking APIs"
+for i in {1..30}; do
+  if curl --silent --fail --max-time 2 "http://127.0.0.1:${app_port}/api/health" >/dev/null; then break; fi
   sleep 2
 done
-curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/ollama/status"
-printf '\n'
-curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/agents/status"
-printf '\n'
-curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/local-worker/status"
-printf '\n'
-curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/debian13/status"
-printf '\n'
-echo "SVL Kernel: http://127.0.0.1:${app_port}"
-echo "Note: local task worker processes Ollama tasks but is not verified as any original Aria/Alex/Astyria/Aurelius agent."
- .env; then
-  if command -v openssl >/dev/null 2>&1; then
-    debian_token="$(openssl rand -hex 32)"
-  elif command -v python3 >/dev/null 2>&1; then
-    debian_token="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-  else
-    echo "Need openssl or python3 to create the Debian 13 API secret" >&2
-    exit 1
-  fi
-  if grep -q '^DEBIAN13_API_TOKEN=' .env; then
-    sed -i "s/^DEBIAN13_API_TOKEN=.*/DEBIAN13_API_TOKEN=${debian_token}/" .env
-  else
-    printf '\nDEBIAN13_API_TOKEN=%s\n' "$debian_token" >> .env
-  fi
-fi
-unset debian_token
-
-model="$(grep -E '^OLLAMA_MODEL=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
-model="${model:-llama2-uncensored:7b}"
-
-# Stage 1: Ollama must be independent of the React/Node image build.
-# If npm install fails, the user's model must still start and remain usable.
-echo "Stage 1/2: Starting private Ollama before building the web application..."
-docker compose up -d ollama
-
-echo "Downloading/verifying model: $model"
-docker compose exec -T ollama ollama pull "$model"
-docker compose exec -T ollama ollama show "$model"
-docker compose exec -T ollama ollama list
-echo "Ollama is started; web app build is a separate step."
-
-# Stage 2: launch the application and optional local task worker.
-echo "Stage 2/2: Building SVL GUI/backend and starting local task worker..."
-if ! docker compose --profile agents up -d --build ai-linux-control agent-rest; then
-  echo >&2 "The Node/React Docker image failed to build, but Ollama should still be running."
-  echo >&2 "To inspect the actual npm error, run:"
-  echo >&2 "docker compose build --no-cache --progress=plain ai-linux-control 2>&1 | tee npm-build.log"
-  echo >&2 "Send the last lines of npm-build.log (do not include .env or access tokens)."
-  docker compose ps || true
-  exit 1
-fi
-
-echo "Checking backend and private worker..."
-app_port="$(grep -E '^APP_PORT=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
-app_port="${app_port:-3000}"
-for attempt in {1..30}; do
-  if curl --silent --fail "http://127.0.0.1:${app_port}/api/health" >/dev/null; then
-    break
-  fi
-  sleep 2
+for endpoint in health debian13/status spaa/status; do
+  curl --fail --show-error --silent "http://127.0.0.1:${app_port}/api/$endpoint"
+  printf '\n'
 done
-curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/ollama/status"
-printf '\n'
-curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/agents/status"
-printf '\n'
-curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/local-worker/status"
-printf '\n'
-echo "SVL Kernel: http://127.0.0.1:${app_port}"
-echo "Note: local task worker processes Ollama tasks but is not verified as any original Aria/Alex/Astyria/Aurelius agent."
+echo "Started. Original external agent identities remain unverified."
