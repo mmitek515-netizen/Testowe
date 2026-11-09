@@ -3,9 +3,12 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import fs from 'fs';
 
 dotenv.config();
+
+const APP_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(express.json());
@@ -146,10 +149,12 @@ async function getOllamaStatusHandler(_req: express.Request, res: express.Respon
     if (response.ok) {
       const data = await response.json() as { models?: Array<{ name: string; size?: number; modified_at?: string }> };
       const modelList = Array.isArray(data.models) ? data.models : [];
+      const installedModels = modelList.map(m => (typeof m === 'string' ? m : m.name));
       return res.json({
         online: true,
         model: OLLAMA_MODEL,
-        models: modelList.map(m => (typeof m === 'string' ? m : m.name)),
+        modelInstalled: installedModels.includes(OLLAMA_MODEL),
+        models: installedModels,
       });
     } else {
       return res.status(response.status).json({
@@ -286,8 +291,9 @@ async function handleChat(req: express.Request, res: express.Response) {
             return res.json({
               text: (response.text || '') + `\n\n*(Informacja: Lokalny serwer Ollama [${OLLAMA_MODEL}] na ${OLLAMA_BASE_URL} jest nieosiągalny. Płynnie kontynuuję rozmowę w trybie hybrydowym).*`,
               persona: persona.name,
-              provider: 'ollama (hybryda)',
-              model: OLLAMA_MODEL,
+              provider: 'gemini',
+              fallbackFrom: 'ollama',
+              model: GEMINI_MODEL,
             });
           } catch (fallbackErr: any) {
             console.error('Fallback Error:', fallbackErr);
@@ -544,7 +550,7 @@ app.post('/api/roundtable', async (req, res) => {
 });
 
 // --- MISSION CONTROL (SPAA / Testowe Epic #1) ---
-const MISSIONS_FILE = path.join(process.cwd(), 'missions.json');
+const MISSIONS_FILE = process.env.MISSIONS_FILE || path.join(APP_ROOT, 'missions.json');
 
 const DEFAULT_SEED_MISSIONS = [
   {
@@ -755,6 +761,7 @@ async function readMissions(): Promise<any[]> {
 
 async function writeMissionsAtomic(missions: any[]): Promise<void> {
   const tmpFile = `${MISSIONS_FILE}.tmp.${Date.now()}`;
+  await fs.promises.mkdir(path.dirname(MISSIONS_FILE), { recursive: true });
   await fs.promises.writeFile(tmpFile, JSON.stringify(missions, null, 2), 'utf-8');
   await fs.promises.rename(tmpFile, MISSIONS_FILE);
 }
@@ -861,9 +868,9 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.join(__dirname, 'dist')));
+    app.use(express.static(path.join(APP_ROOT, 'dist')));
     app.get('*', (_req, res) => {
-      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.join(APP_ROOT, 'dist', 'index.html'));
     });
   }
 
