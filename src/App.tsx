@@ -69,15 +69,9 @@ export default function App() {
             {/* AI Chat Card */}
             <OriginalAiChatCard />
 
-            {/* Middle row: Topological Engine summary & Spherical Scope */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <TopologicalVisualizer onParamChange={handleDomainChange} />
-              </div>
-              <div className="lg:col-span-1">
-                <SphericalScopeVisualizer />
-              </div>
-            </div>
+            {/* Full-width interactive solar navigation and SPAA telemetry */}
+            <SphericalScopeVisualizer />
+            <TopologicalVisualizer onParamChange={handleDomainChange} />
 
             {/* Bottom row: Protected Variables & Status Report */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -112,13 +106,8 @@ export default function App() {
           <div className="space-y-6 animate-in fade-in duration-150">
             <TopologicalVisualizer onParamChange={handleDomainChange} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SphericalScopeVisualizer />
-              <KernelReportCard
-                report={currentReport}
-                onRefresh={handleKernelUpdate}
-              />
-            </div>
+            <SphericalScopeVisualizer />
+            <KernelReportCard report={currentReport} onRefresh={handleKernelUpdate} />
           </div>
         )}
 
