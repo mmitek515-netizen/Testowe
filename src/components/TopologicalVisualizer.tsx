@@ -331,7 +331,7 @@ export default function TopologicalVisualizer({ onParamChange }: Props) {
                 b = {encodeMashy(details.b.toFixed(3))}
               </text>
               <text x={(originX + topX) / 2 - 14} y={(originY + topY) / 2 - 8} fill="#34d399" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
-                c = <MashyValue value={encodeMashy(details.c.toFixed(4))} size={12} />
+                c = {encodeMashy(details.c.toFixed(4))}
               </text>
             </svg>
           </div>
