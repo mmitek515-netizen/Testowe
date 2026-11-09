@@ -56,4 +56,8 @@ Adres i model w panelu Ollamy to **wartości pochodzące z backendu**, a nie zmi
 
 ### Wizja i obrazy
 
-Ustawienia `OLLAMA_MODEL`, `MODEL_NAME` i `VISION_MODEL_NAME` wskazują na `llama3.2-vision:11b`. Serwer Debiana 13 ma endpoint `/v1/vision` z walidacją PNG/JPEG, a czat SVL korzysta z Ollamy. Model potrafi analizować obrazy, jeśli przesłano je do API `images`; sam tekstowy chat nie przesyła plików bez dodatkowego pola. Standard modelu nie oznacza, że został już pobrany lub zmieści się w RAM hosta.
+Ustawienia `OLLAMA_MODEL`, `MODEL_NAME` i `VISION_MODEL_NAME` wskazują na `llama3.2-vision:11b`. Serwer Debiana 13 ma endpoint `/v1/vision` z walidacją PNG/JPEG, a czat SVL korzysta z Ollamy. Interfejs SVL ma przycisk dołączania obrazu PNG/JPEG do 2 MB. Przeglądarka wysyła go do prywatnego backendu `POST /api/ollama/vision`, a serwer przekazuje bazę pikseli przez pole `images` do Ollamy. Tekstowe czaty nadal używają `/api/chat`. Obrazy nie są interpretowane jako uruchomienie root ani nie są automatycznie zapisywane w pamięci SPAA. Standard modelu nie oznacza, że został już pobrany lub zmieści się w RAM hosta.
+
+### Testy i zasoby
+
+W GitHub Actions uruchamiane są testy walidacji PNG/JPEG i kompilacji React/Express. Nie są to testy rzeczywistej inferencji — wymagają hosta z działającą Ollamą i dostateczną pamięcią. Status API `modelInstalled: true` nie dowodzi, że model załadował się do RAM/VRAM ani że odczytał obraz.
