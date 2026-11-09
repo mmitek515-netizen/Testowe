@@ -52,6 +52,16 @@ unset token
 if ! grep -Eq '^DEBIAN13_API_TOKEN=.{32,}"$(grep -E '^OLLAMA_MODEL=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
 model="${model:-llama2-uncensored:7b}"
 
+# Keep Debian 13 local chat on the selected Ollama model unless another provider
+# is explicitly configured by the operator.
+if [[ -z "$(grep -E '^MODEL_CHAT_URL=' .env | tail -n 1 | cut -d '=' -f 2-)" ]]; then
+  if grep -q '^MODEL_NAME=' .env; then
+    sed -i "s|^MODEL_NAME=.*|MODEL_NAME=${model}|" .env
+  else
+    printf '\nMODEL_NAME=%s\n' "$model" >> .env
+  fi
+fi
+
 # Stage 1: Ollama must be independent of the React/Node image build.
 # If npm install fails, the user's model must still start and remain usable.
 echo "Stage 1/2: Starting private Ollama before building the web application..."
