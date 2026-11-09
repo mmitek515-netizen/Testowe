@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 AGENTS = ("Aria", "Alex", "Astyria", "Aurelius")
 OLLAMA = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434").rstrip("/")
-MODEL = os.getenv("AGENT_MODEL", "Thox-ai/thoxopen-8b-heretic:q4_k_m")
+MODEL = os.getenv("AGENT_MODEL", "llama2-uncensored:7b")
 TOKEN = os.getenv("AGENT_API_TOKEN", "")
 PORT = int(os.getenv("AGENT_API_PORT", "8091"))
 DB_PATH = os.getenv("AGENT_DB_PATH", "/data/agent_tasks.sqlite3")
