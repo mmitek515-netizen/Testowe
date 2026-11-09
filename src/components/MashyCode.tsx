@@ -37,10 +37,14 @@ export function MashyValue({
     <span className={'inline-flex flex-wrap items-center align-middle gap-[1px] ' + className}
       role="img" aria-label={'Kod Mashy: ' + encodeMashy(raw)}
       title={encodeMashy(raw)}>
-      {Array.from(raw).map((character, index) => (
-        /^[0-9]$/.test(character)
-          ? <MashyGlyph digit={character} size={size} key={index} />
-          : <span aria-hidden="true" key={index}>{character}</span>
+      {raw.split(/([0-9]+)/g).filter(Boolean).map((part, groupIndex) => (
+        /^[0-9]+$/.test(part)
+          ? <React.Fragment key={groupIndex}>
+              {Array.from(part).map((digit, digitIndex) =>
+                <MashyGlyph digit={digit} size={size} key={digitIndex} />
+              )}
+            </React.Fragment>
+          : <React.Fragment key={groupIndex}>{part}</React.Fragment>
       ))}
     </span>
   );
