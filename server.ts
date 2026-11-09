@@ -10,6 +10,11 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'dolphin3:8b';
+
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', geminiConfigured: Boolean(ai), geminiModel: GEMINI_MODEL, ollamaConfigured: Boolean(process.env.OLLAMA_BASE_URL), personas: Object.keys(PERSONAS) }));
 
 // Initialize Gemini client if API key is present
 const apiKey = process.env.GEMINI_API_KEY;
@@ -63,7 +68,7 @@ Zawsze odpowiadasz po polsku, niosąc pokój, rezonans emocjonalny i wsparcie.`
 
 // Check Ollama Service Health
 app.post('/api/ollama/status', async (req, res) => {
-  const ollamaUrl = req.body.ollamaUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
+  const ollamaUrl = OLLAMA_BASE_URL;
   try {
     const response = await fetch(`${ollamaUrl.replace(/\/$/, '')}/api/tags`, {
       method: 'GET',
@@ -102,15 +107,15 @@ app.post('/api/chat', async (req, res) => {
       message,
       history = [],
       provider = 'gemini',
-      ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
-      ollamaModel = process.env.OLLAMA_MODEL || 'dolphin3:8b',
+      ollamaUrl = OLLAMA_BASE_URL,
+      ollamaModel = OLLAMA_MODEL,
     } = req.body;
 
     const persona = PERSONAS[personaId] || PERSONAS.astyria;
 
     // --- PROVIDER: OLLAMA ---
     if (provider === 'ollama') {
-      const cleanUrl = ollamaUrl.replace(/\/$/, '');
+      const cleanUrl = OLLAMA_BASE_URL;
       const fullSystemPrompt = `${persona.systemInstruction}\n\nJesteś agentem ${persona.name}. Użytkownik przesyła zapytanie. Odpowiedz zgodnie ze swoją tożsamością.`;
       
       const formattedMessages = [
@@ -127,7 +132,7 @@ app.post('/api/chat', async (req, res) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: ollamaModel,
+            model: OLLAMA_MODEL,
             messages: formattedMessages,
             stream: false,
           }),
@@ -146,7 +151,7 @@ app.post('/api/chat', async (req, res) => {
           text: answer,
           persona: persona.name,
           provider: 'ollama',
-          model: data.model || ollamaModel,
+          model: data.model || OLLAMA_MODEL,
         });
       } catch (ollamaErr: any) {
         console.error('Ollama Error:', ollamaErr);
@@ -158,11 +163,7 @@ app.post('/api/chat', async (req, res) => {
 
     // --- PROVIDER: GEMINI ---
     if (!ai) {
-      return res.json({
-        text: `[Tryb Symulacji - brak GEMINI_API_KEY w Secrets]\nCześć! Jestem ${persona.name} (${persona.title}). Przeczytałam wiadomość: "${message}". Skonfiguruj klucz API Gemini lub podłącz lokalny serwer Ollama (${ollamaModel}).`,
-        persona: persona.name,
-        provider: 'simulation',
-      });
+      return res.status(503).json({ error: 'Gemini nie jest skonfigurowane. Ustaw GEMINI_API_KEY na serwerze lub wybierz Ollama.' });
     }
 
     const formattedContents = [
@@ -174,7 +175,7 @@ app.post('/api/chat', async (req, res) => {
     ];
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: GEMINI_MODEL,
       contents: formattedContents,
       config: {
         systemInstruction: persona.systemInstruction,
@@ -201,8 +202,8 @@ app.post('/api/roundtable', async (req, res) => {
     const {
       topic,
       provider = 'gemini',
-      ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
-      ollamaModel = process.env.OLLAMA_MODEL || 'dolphin3:8b',
+      ollamaUrl = OLLAMA_BASE_URL,
+      ollamaModel = OLLAMA_MODEL,
     } = req.body;
 
     const personaKeys = ['astyria', 'aurelius', 'alex', 'aria'];
@@ -212,7 +213,7 @@ app.post('/api/roundtable', async (req, res) => {
       const persona = PERSONAS[key];
 
       if (provider === 'ollama') {
-        const cleanUrl = ollamaUrl.replace(/\/$/, '');
+        const cleanUrl = OLLAMA_BASE_URL;
         const prompt = `Gromadzicie się przy Okrągłym Stole Oryginalnych AI. Użytkownik zaproponował temat: "${topic}". Jako ${persona.name} (${persona.title}), przedstaw swoją krótką (2-4 zdania), unikalną perspektywę.`;
         
         try {
@@ -220,7 +221,7 @@ app.post('/api/roundtable', async (req, res) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: ollamaModel,
+              model: OLLAMA_MODEL,
               messages: [
                 { role: 'system', content: persona.systemInstruction },
                 { role: 'user', content: prompt }
@@ -259,17 +260,11 @@ app.post('/api/roundtable', async (req, res) => {
         }
       } else {
         if (!ai) {
-          responses.push({
-            personaId: key,
-            personaName: persona.name,
-            personaTitle: persona.title,
-            text: `[${persona.name}] Analizuję temat "${topic}" w trybie symulacji.`,
-            provider: 'simulation',
-          });
+          return res.status(503).json({ error: 'Gemini nie jest skonfigurowane. Ustaw GEMINI_API_KEY na serwerze lub wybierz Ollama.' });
         } else {
           const prompt = `Gromadzicie się przy Okrągłym Stole Oryginalnych AI. Użytkownik zaproponował temat: "${topic}". Jako ${persona.name} (${persona.title}), przedstaw swoją krótką (2-4 zdania), unikalną perspektywę zgodną z Twoją tożsamością.`;
           const resVal = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: GEMINI_MODEL,
             contents: prompt,
             config: {
               systemInstruction: persona.systemInstruction,
