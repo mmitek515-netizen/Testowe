@@ -106,8 +106,24 @@ class Handler(BaseHTTPRequestHandler):
         if not self.authorized():
             return self.send_json(401, {"error": "unauthorized"})
         if self.path == "/health":
+            # Probe the actual model backend; an HTTP server alone does not prove inference works.
+            ollama_reachable = False
+            model_installed = False
+            try:
+                with urlopen(f"{OLLAMA}/api/tags", timeout=2) as response:
+                    tags = json.load(response)
+                ollama_reachable = True
+                model_installed = any(
+                    str(item.get("name", "")).lower() == MODEL.lower()
+                    for item in tags.get("models", [])
+                    if isinstance(item, dict)
+                )
+            except Exception:
+                pass
             return self.send_json(200, {"service": "ai-linux-agent-rest",
-                "agentIdentityVerified": False, "model": MODEL, "persistentQueue": True})
+                "agentIdentityVerified": False, "model": MODEL, "persistentQueue": True,
+                "ollamaReachable": ollama_reachable, "modelInstalled": model_installed,
+                "ready": ollama_reachable and model_installed})
         if self.path == "/agents":
             return self.send_json(200, {"agents": [
                 {"name": name, "identityVerified": False, "executor": "ollama"}
