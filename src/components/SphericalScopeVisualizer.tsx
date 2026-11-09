@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Globe2, Pause, Play, Plus, Minus, RotateCcw, Activity, Radar } from 'lucide-react';
+import { Globe2, Pause, Play, Plus, Minus, RotateCcw, Activity, Radar, Layers3, Bot, Satellite, RefreshCw } from 'lucide-react';
 
 type Body = { id: string; name: string; radius: number; size: number; color: string; period: number; phase: number; type: string; distance: string; description: string };
 const bodies: Body[] = [
@@ -16,6 +16,11 @@ const stars = Array.from({length:125},(_,i)=>({x:(i*137.508+31)%1000,y:(i*79.17+
 
 export default function SphericalScopeVisualizer() {
   const [selected,setSelected]=useState('earth');
+  const [selectedAgent,setSelectedAgent]=useState('astyria');
+  const [showOrbits,setShowOrbits]=useState(true);
+  const [showAgentNodes,setShowAgentNodes]=useState(true);
+  const [showLabels,setShowLabels]=useState(true);
+  const [refreshing,setRefreshing]=useState(false);
   const [zoom,setZoom]=useState(1);
   const [running,setRunning]=useState(true);
   const [elapsed,setElapsed]=useState(0);
@@ -26,6 +31,15 @@ export default function SphericalScopeVisualizer() {
     const timer=window.setInterval(()=>setElapsed(t=>t+0.012),80);
     return()=>window.clearInterval(timer);
   },[running]);
+  const refreshTelemetry=async()=>{
+    setRefreshing(true);
+    try {
+      const response=await fetch('/api/spaa/snapshot');
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      setSnapshot(await response.json());setStatusError('');
+    } catch(e) { setStatusError('Nie udało się pobrać pomiaru SPAA'); }
+    finally { setRefreshing(false); }
+  };
   useEffect(()=>{
     let active=true;
     const update=async()=>{
@@ -46,6 +60,10 @@ export default function SphericalScopeVisualizer() {
     return {...b,x:500+b.radius*Math.cos(angle),y:350+b.radius*0.66*Math.sin(angle)};
   }),[elapsed]);
   const observations=Array.isArray(snapshot?.observations)?snapshot.observations:[];
+  const agents=['astyria','aurelius','alex','aria'];
+  const agentStatus=observations.find((o:any)=>o.source==='agents');
+  const configuredAgents: string[]=Array.isArray(agentStatus?.data?.configured)?agentStatus.data.configured:[];
+  const agentNodes=agents.map((id,i)=>({id,x:500+Math.cos(i*Math.PI/2+.4)*375,y:350+Math.sin(i*Math.PI/2+.4)*230}));
   const ok=observations.filter((o:any)=>o.ok).length;
   return (
     <section className="rounded-2xl overflow-hidden border border-cyan-500/25 bg-[#060c1c] shadow-2xl">
@@ -64,6 +82,12 @@ export default function SphericalScopeVisualizer() {
           <button onClick={()=>{setZoom(1);setElapsed(0);setSelected('earth');}} aria-label="Resetuj widok" className="p-2 rounded-lg border border-cyan-500/30 hover:bg-cyan-500/20"><RotateCcw size={17}/></button>
         </div>
       </header>
+      <div className="flex flex-wrap gap-2 px-4 py-3 bg-[#071326] border-b border-cyan-500/20 text-xs">
+        <button onClick={()=>setShowOrbits(v=>!v)} aria-pressed={showOrbits} className={`flex items-center gap-2 rounded-md border px-3 py-2 ${showOrbits?'border-cyan-500 text-cyan-200':'border-slate-700 text-slate-400'}`}><Layers3 size={15}/> Orbity</button>
+        <button onClick={()=>setShowAgentNodes(v=>!v)} aria-pressed={showAgentNodes} className={`flex items-center gap-2 rounded-md border px-3 py-2 ${showAgentNodes?'border-cyan-500 text-cyan-200':'border-slate-700 text-slate-400'}`}><Bot size={15}/> Agenci AI</button>
+        <button onClick={()=>setShowLabels(v=>!v)} aria-pressed={showLabels} className={`flex items-center gap-2 rounded-md border px-3 py-2 ${showLabels?'border-cyan-500 text-cyan-200':'border-slate-700 text-slate-400'}`}><Satellite size={15}/> Etykiety</button>
+        <button onClick={()=>void refreshTelemetry()} disabled={refreshing} className="flex items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-slate-300 hover:border-cyan-500 disabled:opacity-50"><RefreshCw size={15} className={refreshing?'animate-spin':''}/> Odśwież SPAA</button>
+      </div>
       <div className="relative bg-[#030916]">
         <svg viewBox="0 0 1000 700" role="img" aria-label="Interaktywna mapa Układu Słonecznego z planetami i orbitami" className="w-full h-auto min-h-[290px] max-h-[660px] touch-manipulation">
           <defs>
@@ -74,7 +98,7 @@ export default function SphericalScopeVisualizer() {
           <rect width="1000" height="700" fill="url(#solar-background)"/>
           {stars.map((s,i)=><circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#b4d7ff" opacity={i%4===0?.7:.28}/>)}
           <g transform={`translate(500 350) scale(${zoom}) translate(-500 -350)`}>
-            {bodies.map(b=><ellipse key={b.id} cx="500" cy="350" rx={b.radius} ry={b.radius*.66} stroke="#3c7899" strokeOpacity=".37" strokeWidth="1.2" strokeDasharray="3 5" fill="none"/>)}
+            {showOrbits&&bodies.map(b=><ellipse key={b.id} cx="500" cy="350" rx={b.radius} ry={b.radius*.66} stroke="#3c7899" strokeOpacity=".37" strokeWidth="1.2" strokeDasharray="3 5" fill="none"/>)}
             <circle cx="500" cy="350" r="31" fill="#f8ae42" opacity=".23" filter="url(#solar-glow)"/>
             <circle cx="500" cy="350" r="18" fill="url(#solar-star)" stroke="#ffe1a0" strokeWidth="1.5"/>
             <text x="500" y="386" textAnchor="middle" fontSize="13" fill="#ffe6a0" letterSpacing="2">SŁOŃCE</text>
@@ -83,7 +107,12 @@ export default function SphericalScopeVisualizer() {
               <circle cx={b.x} cy={b.y} r={Math.max(13,b.size+6)} fill="transparent"/>
               <circle cx={b.x} cy={b.y} r={b.size} fill={b.color} stroke="#d9eaff" strokeOpacity=".55"/>
               {b.id==='saturn'&&<ellipse cx={b.x} cy={b.y} rx="20" ry="7" stroke="#ddc48f" strokeWidth="2" fill="none" transform={`rotate(-22 ${b.x} ${b.y})`}/>}
-              <text x={b.x+12} y={b.y-12} fill={selected===b.id?'#a5f3fc':'#a9bfd8'} fontSize="13" fontWeight={selected===b.id?700:400}>{b.name}</text>
+              {showLabels&&<text x={b.x+12} y={b.y-12} fill={selected===b.id?'#a5f3fc':'#a9bfd8'} fontSize="13" fontWeight={selected===b.id?700:400}>{b.name}</text>}
+            </g>)}
+            {showAgentNodes&&agentNodes.map(node=><g key={node.id} role="button" tabIndex={0} aria-label={'Wybierz agenta '+node.id} onClick={()=>setSelectedAgent(node.id)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelectedAgent(node.id);}}} style={{cursor:'pointer'}}>
+              <path d={`M ${node.x} ${node.y-9} L ${node.x+9} ${node.y+7} L ${node.x-9} ${node.y+7} Z`} fill={selectedAgent===node.id?'#67e8f9':'#6d83b6'} stroke="#d4f8ff" strokeWidth="1.5"/>
+              <circle cx={node.x} cy={node.y} r="17" stroke={selectedAgent===node.id?'#67e8f9':'#46617b'} strokeDasharray="3 4" fill="none"/>
+              {showLabels&&<text x={node.x+18} y={node.y+4} fontSize="13" fill="#9ee9f5">{node.id.toUpperCase()}</text>}
             </g>)}
           </g>
           <text x="24" y="32" fill="#70c5e9" fontSize="12" letterSpacing="3">SYSTEM SOL · MAPA POGLĄDOWA</text>
@@ -104,7 +133,13 @@ export default function SphericalScopeVisualizer() {
           <div className="flex items-center gap-2 mt-3 text-sm text-slate-300"><Activity size={15}/>{observations.length? `${ok}/${observations.length} źródeł odpowiada`:'Oczekiwanie na pomiar backendu'}</div>
           <p className="text-xs text-slate-500 mt-2">{snapshot?.timestamp?'Ostatni pomiar: '+new Date(snapshot.timestamp).toLocaleString('pl-PL'):'Brak zapisanego pomiaru'}{statusError?' · '+statusError:''}</p>
           <div className="space-y-2 mt-3">{observations.map((o:any)=><div key={o.source} className="flex justify-between gap-3 text-xs rounded-md bg-slate-900/70 border border-slate-800 p-2"><span className="text-slate-300">{o.source}</span><span className={o.ok?'text-emerald-400':'text-rose-400'}>{o.ok?'ONLINE':'BRAK ODPOWIEDZI'}</span></div>)}</div>
-          <p className="text-[11px] text-slate-500 mt-3">Mapa planet jest wizualizacją. Telemetria pochodzi z rzeczywistych pomiarów backendu, gdy jest dostępna.</p>
+          <div className="mt-4 rounded-lg border border-cyan-500/20 bg-[#08162a] p-3">
+            <div className="text-[10px] tracking-widest text-cyan-400 uppercase">Wybrany agent · {selectedAgent}</div>
+            <p className="text-sm text-slate-300 mt-2">{configuredAgents.includes(selectedAgent)?'Konfiguracja agenta wykryta w backendzie':'Brak potwierdzonej konfiguracji w ostatnim pomiarze'}</p>
+            <p className="text-xs text-slate-500 mt-1">Obecność konfiguracji nie potwierdza uruchomienia autonomicznego workera.</p>
+            <div className="flex flex-wrap gap-2 mt-3">{agents.map(id=><button key={id} onClick={()=>setSelectedAgent(id)} className={`px-2 py-1 rounded border text-xs ${id===selectedAgent?'border-cyan-400 text-cyan-200':'border-slate-700 text-slate-400'}`}>{id}</button>)}</div>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-3">Mapa planet i pozycje agentów są poglądowe. Telemetria pochodzi z rzeczywistych pomiarów backendu, gdy jest dostępna.</p>
         </div>
       </div>
     </section>
