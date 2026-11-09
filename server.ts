@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import { validateVisionImagePayload } from './src/core/visionImage';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
@@ -11,7 +12,8 @@ dotenv.config();
 const APP_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-app.use(express.json());
+// Vision: up to 2 MiB original PNG/JPEG becomes ~2.8 MiB base64 JSON.
+app.use(express.json({ limit: '4mb' }));
 
 const PORT = process.env.PORT || 3000;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
@@ -554,6 +556,58 @@ async function handleChat(req: express.Request, res: express.Response) {
 
 // Main chat route
 app.post('/api/chat', handleChat);
+
+// Real Ollama Vision image analysis, using the configured server-side model.
+// Browser never supplies an arbitrary Ollama URL or model tag.
+app.post('/api/ollama/vision', async (req, res) => {
+  const image = (() => {
+    try { return validateVisionImagePayload(req.body?.image); }
+    catch { return null; }
+  })();
+  if (!image) return res.status(400).json({
+    error: 'Prześlij poprawny obraz PNG lub JPEG o rozmiarze do 2 MB.'
+  });
+  const personaId = typeof req.body?.personaId === 'string' ? req.body.personaId : 'astyria';
+  const persona = PERSONAS[personaId] || PERSONAS.astyria;
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+  if (message.length > 8000) return res.status(400).json({ error: 'Zapytanie jest zbyt długie.' });
+  const prompt = message || 'Opisz szczegółowo załączony obraz.';
+  try {
+    const response = await fetch(OLLAMA_BASE_URL + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        stream: false,
+        messages: [
+          { role: 'system', content: persona.systemInstruction +
+            '\nObraz analizuj na podstawie faktycznie przesłanych pikseli. Zaznacz niepewność.' },
+          { role: 'user', content: prompt, images: [image.base64] },
+        ],
+        options: { num_predict: 384 },
+      }),
+      redirect: 'error',
+      signal: AbortSignal.timeout(180000),
+    });
+    if (!response.ok) return res.status(502).json({
+      error: 'Ollama Vision odmówiła analizy obrazu; sprawdź model i zasoby serwera.'
+    });
+    const body = await response.json() as { message?: { content?: unknown }; model?: unknown };
+    const answer = body.message?.content;
+    if (typeof answer !== 'string' || !answer.trim()) {
+      return res.status(502).json({ error: 'Model Vision nie zwrócił odpowiedzi.' });
+    }
+    return res.json({
+      text: answer, provider: 'ollama', persona: persona.name,
+      model: typeof body.model === 'string' ? body.model : OLLAMA_MODEL,
+      vision: true,
+    });
+  } catch {
+    return res.status(503).json({
+      error: 'Nie można połączyć się z Ollamą Vision. Sprawdź jej instalację i pamięć.'
+    });
+  }
+});
 
 // POST /api/ollama/chat - accepts chat messages payload and forwards to server-side chat with streaming support
 app.post('/api/ollama/chat', (req, res) => {
