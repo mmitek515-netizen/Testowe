@@ -4,7 +4,7 @@
 
 `docker-compose.yml` uruchamia trzy usługi:
 - `ollama` — właściwy serwer inferencji, dostępny **wyłącznie w prywatnej sieci Docker**, bez publicznego portu 11434;
-- `ollama-pull` — pobiera model `dolphin3:8b` do trwałego woluminu `ollama_models`;
+- `ollama-pull` — pobiera model `Thox-ai/thoxopen-8b-heretic:q4_k_m` do trwałego woluminu `ollama_models`;
 - `ai-linux-control` — backend Express + GUI Vite, rozmawia z Ollamą przez wewnętrzny adres `http://ollama:11434`.
 
 Baza docelowa: **Debian 13 host**, na którym zainstalowane są Docker Engine i aktualny plugin Docker Compose v2. To kontenery aplikacji; sam stack **nie jest jeszcze bootowalną dystrybucją Debian 13**.
@@ -20,7 +20,7 @@ docker compose up -d --build
 docker compose logs -f ollama-pull
 ```
 
-Na pierwszy start trzeba pobrać ~4.9 GB modelu. Wymagane jest dodatkowe miejsce na obrazy Dockera; 8–12 GB RAM jest rozsądnym punktem wyjścia dla tego modelu, szczególnie przy jednoczesnym backendzie i innych procesach.
+Na pierwszy start trzeba pobrać ~5.0 GB modelu. Wymagane jest dodatkowe miejsce na obrazy Dockera; 8–12 GB RAM jest rozsądnym punktem wyjścia dla tego modelu, szczególnie przy jednoczesnym backendzie i innych procesach.
 
 ## Kontrola rzeczywistego działania
 
@@ -33,7 +33,7 @@ curl -fsS -X POST http://127.0.0.1:3000/api/chat \
   -d '{"personaId":"alex","message":"Odpowiedz krótko: czy model działa?","provider":"ollama"}'
 ```
 
-Odpowiedź statusowa powinna podać `online: true`, `model: dolphin3:8b`, `modelInstalled: true`. Jeśli `modelInstalled: false`, obserwuj logi usługi `ollama-pull` albo wykonaj `docker compose exec -T ollama ollama pull dolphin3:8b`.
+Odpowiedź statusowa powinna podać `online: true`, `model: Thox-ai/thoxopen-8b-heretic:q4_k_m`, `modelInstalled: true`. Jeśli `modelInstalled: false`, obserwuj logi usługi `ollama-pull` albo wykonaj `docker compose exec -T ollama ollama pull Thox-ai/thoxopen-8b-heretic:q4_k_m`.
 
 Stan czatu pokazuje działanie **persony poprzez model Ollama**, ale nie dowodzi podłączenia oryginalnego, autonomicznego agenta. Misje AI nadal wymagają osobnego wykonawcy zadań.
 
