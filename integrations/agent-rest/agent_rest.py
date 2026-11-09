@@ -26,7 +26,7 @@ AGENTS = {
     "Astyria": ("analysis", "research"),
     "Aurelius": ("analysis", "diagnostics", "integration"),
 }
-MODEL = os.getenv("AGENT_MODEL", "llama2-uncensored:7b")
+MODEL = os.getenv("AGENT_MODEL", "llama3.2-vision:11b")
 OLLAMA = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434").rstrip("/")
 DEBIAN = os.getenv("DEBIAN13_SYSTEM_API_URL", "http://debian13-system:8080").rstrip("/")
 DEBIAN_TOKEN = os.getenv("DEBIAN13_API_TOKEN", "")

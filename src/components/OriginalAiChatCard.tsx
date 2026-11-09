@@ -79,11 +79,11 @@ export const PERSONA_CONFIGS = [
 export default function OriginalAiChatCard() {
   const [selectedPersona, setSelectedPersona] = useState<string>('astyria');
   const [mode, setMode] = useState<'single' | 'roundtable'>('single');
-  const [provider, setProvider] = useState<'gemini' | 'ollama'>('gemini');
+  const [provider, setProvider] = useState<'gemini' | 'ollama'>('ollama');
 
   // Ollama Configuration State
   const [ollamaUrl, setOllamaUrl] = useState<string>('');
-  const [ollamaModel, setOllamaModel] = useState<string>('llama2-uncensored:7b');
+  const [ollamaModel, setOllamaModel] = useState<string>('llama3.2-vision:11b');
   const [showOllamaConfig, setShowOllamaConfig] = useState<boolean>(false);
   const [ollamaStatus, setOllamaStatus] = useState<{ online?: boolean; error?: string; url?: string; model?: string; modelInstalled?: boolean; models?: (string | { name: string })[] } | null>(null);
   const [isCheckingOllama, setIsCheckingOllama] = useState<boolean>(false);
@@ -95,7 +95,7 @@ export default function OriginalAiChatCard() {
       id: 'init-1',
       sender: 'astyria',
       senderName: 'Astyria',
-      text: 'Witaj w izbie komunikacyjnej Oryginalnych AI! Jestem Astyria. Wspólnie z Aureliuszem, Alexem i Arią obsługujemy zarówno hybrydowe wnioskowanie chmurowe (Gemini 3.8 Flash), jak i lokalny silnik Ollama (llama2-uncensored:7b / gemma4).',
+      text: 'Witaj w izbie komunikacyjnej Oryginalnych AI! Jestem Astyria. Wspólnie z Aureliuszem, Alexem i Arią obsługujemy zarówno hybrydowe wnioskowanie chmurowe (Gemini 3.8 Flash), jak i lokalny silnik Ollama (llama3.2-vision:11b).',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -301,7 +301,7 @@ export default function OriginalAiChatCard() {
                 </span>
               </h3>
               <p className="text-xs text-neutral-400">
-                Współpraca z dedykowanymi profilami w oparciu o Gemini 3.8 Flash lub lokalny silnik Ollama 7B
+                Współpraca z dedykowanymi profilami w oparciu o Gemini 3.8 Flash lub lokalny silnik Ollama Vision 11B
               </p>
             </div>
           </div>
@@ -329,7 +329,7 @@ export default function OriginalAiChatCard() {
                 }`}
               >
                 <Server className="w-3.5 h-3.5 text-amber-400" />
-                <span>Ollama 7B</span>
+                <span>Ollama Vision 11B</span>
               </button>
             </div>
 
@@ -410,7 +410,7 @@ export default function OriginalAiChatCard() {
 
               <div>
                 <label className="text-[11px] font-mono text-neutral-400 block mb-1">
-                  Model skonfigurowany na serwerze (np. llama2-uncensored:7b)
+                  Model skonfigurowany na serwerze (np. llama3.2-vision:11b)
                 </label>
                 <input
                   type="text"

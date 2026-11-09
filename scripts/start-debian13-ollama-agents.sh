@@ -33,7 +33,11 @@ if [[ -n "${1:-}" ]]; then
   update_env OLLAMA_MODEL "$1"
 fi
 model="$(read_env OLLAMA_MODEL)"
-model="${model:-llama2-uncensored:7b}"
+# Migrate the project's previous default once; keep explicit custom selections.
+if [[ -z "$model" || "$model" == 'llama2-uncensored:7b' ]]; then
+  model='llama3.2-vision:11b'
+  update_env OLLAMA_MODEL "$model"
+fi
 if [[ ! "$model" =~ ^[A-Za-z0-9._/-]+:[A-Za-z0-9._-]+$ ]]; then
   echo "Invalid OLLAMA_MODEL in .env" >&2; exit 2
 fi
@@ -45,8 +49,18 @@ for token_var in AGENT_API_TOKEN DEBIAN13_API_TOKEN; do
   fi
 done
 
-# The imported Debian 13 API uses the private Docker Ollama endpoint by default.
-if [[ -z "$(read_env MODEL_CHAT_URL)" ]]; then update_env MODEL_NAME "$model"; fi
+# Keep the Debian 13 chat default aligned with the selected Ollama model.
+# Never replace a deliberately configured non-default external provider.
+if [[ -z "$(read_env MODEL_CHAT_URL)" ]]; then
+  old_name="$(read_env MODEL_NAME)"
+  if [[ -z "$old_name" || "$old_name" == 'llama2-uncensored:7b' ]]; then
+    update_env MODEL_NAME "$model"
+  fi
+fi
+old_vision="$(read_env VISION_MODEL_NAME)"
+if [[ -z "$old_vision" || "$old_vision" == 'llama2-uncensored:7b' ]]; then
+  update_env VISION_MODEL_NAME 'llama3.2-vision:11b'
+fi
 
 echo "Stage 1: start private Ollama"
 docker compose up -d ollama

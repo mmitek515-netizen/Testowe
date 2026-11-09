@@ -16,7 +16,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama2-uncensored:7b';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2-vision:11b';
 
 app.get('/api/health', (_req, res) => res.json({
   status: 'ok',
@@ -763,8 +763,8 @@ const DEFAULT_SEED_MISSIONS = [
   {
     id: 'mission-02',
     number: '02',
-    title: '02 Ollama 7B/8B — uruchomienie, API i telemetria',
-    description: 'Uruchomienie lokalnej Ollamy z wybranym modelem (aktualnie llama2-uncensored:7b) oraz diagnostyka i możliwość używania 8B.',
+    title: '02 Ollama Llama 3.2 Vision 11B — API i telemetria',
+    description: 'Uruchomienie domyślnego modelu llama3.2-vision:11b oraz diagnostyka tekstu i obrazów.',
     targetAgent: 'Alex',
     assignedAgent: null,
     status: 'planned',

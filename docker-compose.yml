@@ -24,7 +24,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull ${OLLAMA_MODEL:-llama2-uncensored:7b}"]
+    command: ["ollama pull ${OLLAMA_MODEL:-llama3.2-vision:11b}"]
 
   # SPAA spherical/polymorphic/asymmetric/asynchronous local daemon.
   # Its four routing labels are NOT verified original external AI agents.
@@ -39,7 +39,7 @@ services:
         condition: service_healthy
     environment:
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:-}
-      AGENT_MODEL: ${OLLAMA_MODEL:-llama2-uncensored:7b}
+      AGENT_MODEL: ${OLLAMA_MODEL:-llama3.2-vision:11b}
       AGENT_API_PORT: "8091"
       AGENT_API_HOST: 0.0.0.0  # only on the private Compose network; no public ports
       AGENT_DB_PATH: /data/agent_tasks.sqlite3
@@ -76,7 +76,8 @@ services:
       # Internal Ollama implements the OpenAI chat-completions interface.
       MODEL_CHAT_URL: ${MODEL_CHAT_URL:-http://ollama:11434/v1/chat/completions}
       MODEL_API_KEY: ${MODEL_API_KEY:-ollama-local}
-      MODEL_NAME: ${MODEL_NAME:-llama2-uncensored:7b}
+      MODEL_NAME: ${MODEL_NAME:-${OLLAMA_MODEL:-llama3.2-vision:11b}}
+      VISION_MODEL_NAME: ${VISION_MODEL_NAME:-llama3.2-vision:11b}
       DEBIAN13_ALLOW_INTERNAL_OLLAMA: "1"
       HOST: 0.0.0.0
       PORT: "8080"
@@ -117,7 +118,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama2-uncensored:7b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2-vision:11b}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       MISSIONS_FILE: /data/missions.json
       AGENT_API_URL: http://agent-rest:8091
