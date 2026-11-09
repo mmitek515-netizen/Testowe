@@ -1,0 +1,6 @@
+{
+  "name": "SVL Hard-Logic Kernel Engine & Topological Auditor",
+  "description": "Interactive runtime and security auditor for the SVL Hard-Logic Kernel, Topological Infinity Engine, and repo inspection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
