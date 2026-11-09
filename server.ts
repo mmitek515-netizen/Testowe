@@ -279,8 +279,9 @@ async function handleChat(req: express.Request, res: express.Response) {
             model: OLLAMA_MODEL,
             messages: formattedMessages,
             stream: Boolean(stream),
+            options: { num_predict: 256 },
           }),
-          signal: AbortSignal.timeout(60000),
+          signal: AbortSignal.timeout(180000),
         });
 
         if (!ollamaRes.ok) {
