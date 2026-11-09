@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
+from systemd_observer import observe_procfs, observe_systemd_services
+
 AGENTS = {
     "Aria": ("analysis", "research"),
     "Alex": ("analysis", "integration"),
@@ -161,6 +163,8 @@ def source_probes():
         "ollama.models": tags, "ollama.loaded": running,
         "debian.health": debian_health, "debian.diagnostics": debian_diagnostics,
         "svl.health": backend_health, "tasks.queue": local_tasks,
+        "linux.systemd.services": observe_systemd_services,
+        "linux.procfs.processes": observe_procfs,
     }
 
 
