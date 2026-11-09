@@ -10,6 +10,17 @@ type SPAAWorker = {
   sphereId: string | null;
   originalIdentityVerified: false;
 };
+type MeshMember = { name: string; online: boolean; capabilities: string[]; pendingMessages: number; sphereId: string | null };
+type MeshEdge = { from: string; to: string; available: boolean };
+type SPAAMesh = {
+  state: 'online' | 'offline';
+  sphereId: string | null;
+  directedLinks: number;
+  members: MeshMember[];
+  edges: MeshEdge[];
+  messagesStored: number;
+};
+
 type SPAAStatus = {
   state: 'online' | 'offline';
   spherical: boolean;
@@ -23,6 +34,8 @@ type SPAAStatus = {
 
 export default function SPAAStatusCard() {
   const [status, setStatus] = useState<SPAAStatus | null>(null);
+  const [mesh, setMesh] = useState<SPAAMesh | null>(null);
+  const [selectedPeer, setSelectedPeer] = useState('Aria');
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const refresh = useCallback(async () => {
@@ -33,9 +46,19 @@ export default function SPAAStatusCard() {
       const payload = await response.json() as SPAAStatus;
       if (!Array.isArray(payload.workers)) throw new Error('Błędny kontrakt SPAA');
       setStatus(payload);
+      try {
+        const meshReply = await fetch('/api/spaa/mesh', { cache: 'no-store' });
+        if (!meshReply.ok) throw new Error('Mesh nie odpowiada');
+        const topology = await meshReply.json() as SPAAMesh;
+        if (!Array.isArray(topology.edges) || !Array.isArray(topology.members)) throw new Error('Mesh niepoprawny');
+        setMesh(topology);
+      } catch {
+        setMesh(null);
+      }
       setError('');
     } catch (exc) {
       setStatus(null);
+      setMesh(null);
       setError(exc instanceof Error ? exc.message : 'Błąd odczytu SPAA');
     } finally {
       setRefreshing(false);
@@ -100,6 +123,54 @@ export default function SPAAStatusCard() {
             </p>
           </div>
         ))}
+      </div>
+      <div className="border-t border-neutral-800 pt-4 space-y-3">
+        <div className="flex justify-between gap-2 flex-wrap">
+          <h3 className="font-semibold text-neutral-200">Wspólna sfera · połączenia każdy z każdym</h3>
+          <span className={mesh?.state === 'online' ? 'text-emerald-300' : 'text-amber-300'}>
+            {mesh?.state === 'online' ? mesh.directedLinks + '/12 kierunków skonfigurowanych' : 'Siatka niepotwierdzona'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {['Aria', 'Alex', 'Astyria', 'Aurelius'].map(name => {
+            const member = mesh?.members.find(x => x.name === name);
+            return (
+              <button key={name} type="button" onClick={() => setSelectedPeer(name)}
+                aria-pressed={selectedPeer === name}
+                className={'rounded-lg border p-3 text-left transition-colors ' + (
+                  selectedPeer === name ? 'border-cyan-600 bg-cyan-950/30' :
+                  'border-neutral-800 bg-neutral-900/70 hover:border-neutral-600'
+                )}>
+                <span className="font-semibold">{name}</span>
+                <span className={'block text-[11px] mt-1 ' + (member?.online ? 'text-emerald-400' : 'text-amber-300')}>
+                  {member?.online ? 'Worker dostępny' : 'Niepotwierdzony'}
+                </span>
+                <span className="block text-neutral-500 mt-1">Oczekujące: {member?.pendingMessages ?? '—'}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="rounded-lg bg-neutral-900/70 border border-neutral-800 p-3 space-y-2">
+          <p className="text-neutral-200">Trasy wiadomości: <strong>{selectedPeer}</strong></p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {['Aria', 'Alex', 'Astyria', 'Aurelius'].filter(name => name !== selectedPeer).map(peer => {
+              const out = mesh?.edges.find(e => e.from === selectedPeer && e.to === peer);
+              const incoming = mesh?.edges.find(e => e.from === peer && e.to === selectedPeer);
+              return (
+                <div key={peer} className="rounded-md border border-neutral-800 p-2 font-mono">
+                  <span>{selectedPeer} ⇄ {peer}</span>
+                  <span className={'block mt-1 ' + (out?.available && incoming?.available ? 'text-emerald-300' : 'text-amber-300')}>
+                    {out?.available && incoming?.available ? '2/2 kierunki aktywne' : 'Trasa dostępna logicznie; połączenie niepotwierdzone'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-neutral-500 text-[11px]">
+            Wspólna sfera: {mesh?.sphereId?.slice(0, 8) || 'brak'} · Zapisane przekazania: {mesh?.messagesStored ?? '—'}.
+            Komunikacja odbywa się przez trwałą kolejkę, bez automatycznej pętli odpowiedzi.
+          </p>
+        </div>
       </div>
       <p className="text-[11px] text-neutral-500">
         Każdy lokalny worker korzysta z tej samej sfery podłączonych źródeł. Nazwy agentów są etykietami routingu;
