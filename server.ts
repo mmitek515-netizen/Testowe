@@ -934,7 +934,7 @@ app.post('/api/missions/:id/start', async (req, res) => {
 
 // Debian 13 runtime bridge: strictly read-only, server-to-server, no browser token.
 // Codespaces/Google AI Studio frontend must not pretend localhost means the Debian host.
-const DEBIAN13_SYSTEM_API_URL = (process.env.DEBIAN13_SYSTEM_API_URL || '').trim().replace(/\\/$/, '');
+const DEBIAN13_SYSTEM_API_URL = (process.env.DEBIAN13_SYSTEM_API_URL || '').trim().replace(/[/]$/, '');
 const DEBIAN13_API_TOKEN = process.env.DEBIAN13_API_TOKEN || '';
 
 function validatedDebian13Origin(): string {
