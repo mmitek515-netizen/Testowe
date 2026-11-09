@@ -81,7 +81,7 @@ const AGENT_API_TOKEN = process.env.AGENT_API_TOKEN || '';
 
 async function localWorkerHealth() {
   if (!AGENT_API_URL || !AGENT_API_TOKEN) {
-    return { online: false, configured: false, identityVerified: false, error: 'Lokalny worker nie jest skonfigurowany.' };
+    return { online: false, ready: false, configured: false, identityVerified: false, error: 'Lokalny worker nie jest skonfigurowany.' };
   }
   try {
     const response = await fetch(`${AGENT_API_URL}/health`, {
@@ -89,11 +89,14 @@ async function localWorkerHealth() {
       signal: AbortSignal.timeout(4000)
     });
     if (!response.ok) {
-      return { online: false, configured: true, identityVerified: false, error: `Worker HTTP ${response.status}` };
+      return { online: false, ready: false, configured: true, identityVerified: false, error: `Worker HTTP ${response.status}` };
     }
-    const data = await response.json() as { model?: string; persistentQueue?: boolean; agentIdentityVerified?: boolean };
+    const data = await response.json() as { model?: string; persistentQueue?: boolean; agentIdentityVerified?: boolean; ready?: boolean; ollamaReachable?: boolean; modelInstalled?: boolean };
     return {
       online: true,
+      ready: data.ready === true,
+      modelInstalled: data.modelInstalled === true,
+      ollamaReachable: data.ollamaReachable === true,
       configured: true,
       identityVerified: data.agentIdentityVerified === true,
       model: data.model || '',
@@ -103,6 +106,7 @@ async function localWorkerHealth() {
   } catch (error) {
     return {
       online: false,
+      ready: false,
       configured: true,
       identityVerified: false,
       error: error instanceof Error ? error.message : String(error)
@@ -157,7 +161,7 @@ app.get('/api/agents/status', async (_req, res) => {
       name: persona.name,
       executorStatus: localWorker.online ? 'local-ollama-unverified' : 'not-connected',
       originalExecutorConnected: false,
-      localTaskWorkerAvailable: localWorker.online,
+      localTaskWorkerAvailable: localWorker.ready,
       note: 'Persona konwersacyjna; brak potwierdzonego oryginalnego agenta.'
     }))
   });
@@ -212,7 +216,7 @@ async function getOllamaStatusHandler(_req: express.Request, res: express.Respon
         online: true,
         url: OLLAMA_BASE_URL,
         model: OLLAMA_MODEL,
-        modelInstalled: installedModels.includes(OLLAMA_MODEL),
+        modelInstalled: installedModels.some(name => name.toLowerCase() === OLLAMA_MODEL.toLowerCase()),
         models: installedModels,
       });
     } else {
