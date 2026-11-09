@@ -24,7 +24,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull ${OLLAMA_MODEL:-dolphin3:8b}"]
+    command: ["ollama pull ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}"]
 
   ai-linux-control:
     build: .
@@ -41,7 +41,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-dolphin3:8b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       MISSIONS_FILE: /data/missions.json
     volumes:
