@@ -24,7 +24,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}"]
+    command: ["ollama pull ${OLLAMA_MODEL:-llama2-uncensored:7b}"]
 
   # Optional local, persistent Ollama task worker imported from AI System Linux.
   # It is NOT authenticated as any of the four original external agents.
@@ -39,7 +39,7 @@ services:
         condition: service_healthy
     environment:
       AGENT_API_TOKEN: ${AGENT_API_TOKEN:-}
-      AGENT_MODEL: ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}
+      AGENT_MODEL: ${OLLAMA_MODEL:-llama2-uncensored:7b}
       AGENT_API_PORT: "8091"
       AGENT_DB_PATH: /data/agent_tasks.sqlite3
       OLLAMA_BASE_URL: http://ollama:11434
@@ -68,7 +68,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-Thox-ai/thoxopen-8b-heretic:q4_k_m}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama2-uncensored:7b}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       MISSIONS_FILE: /data/missions.json
       AGENT_API_URL: http://agent-rest:8091
