@@ -8,6 +8,7 @@ All active workers receive the same last committed observation sphere.
 from __future__ import annotations
 
 import hmac
+from contextlib import contextmanager
 import json
 import os
 import sqlite3
@@ -50,9 +51,22 @@ def connect():
     return db
 
 
+@contextmanager
+def db_session():
+    db = connect()
+    try:
+        yield db
+        db.commit()
+    except BaseException:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 def init_db():
     os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
-    with DB_LOCK, connect() as db:
+    with DB_LOCK, db_session() as db:
         db.execute("PRAGMA journal_mode=WAL")
         db.executescript("""CREATE TABLE IF NOT EXISTS tasks (
             id TEXT PRIMARY KEY, agent TEXT NOT NULL, description TEXT NOT NULL,
@@ -130,7 +144,7 @@ def source_probes():
         return {"status": raw.get("status"), "personas": raw.get("personas", [])}
 
     def local_tasks():
-        with connect() as db:
+        with db_session() as db:
             entries = db.execute("SELECT status, COUNT(*) AS n FROM tasks GROUP BY status").fetchall()
         return {"counts": {row["status"]: row["n"] for row in entries}}
 
@@ -157,7 +171,7 @@ def collect_sphere(probes=None):
 
     with ThreadPoolExecutor(max_workers=min(8, max(1, len(sources)))) as pool:
         readings = list(pool.map(observe, sources.items()))
-    with DB_LOCK, connect() as db:
+    with DB_LOCK, db_session() as db:
         db.execute("BEGIN IMMEDIATE")
         db.execute("INSERT INTO spheres(id,observedAt,sourceCount) VALUES (?,?,?)",
                    (sphere_id, observed_at, len(sources)))
@@ -175,7 +189,7 @@ def collect_sphere(probes=None):
 
 
 def read_sphere(sphere_id=None):
-    with connect() as db:
+    with db_session() as db:
         if sphere_id:
             row = db.execute("SELECT * FROM spheres WHERE id=?", (sphere_id,)).fetchone()
         else:
@@ -193,7 +207,7 @@ def read_sphere(sphere_id=None):
 
 
 def worker_state(agent, state, task=None, error=None):
-    with DB_LOCK, connect() as db:
+    with DB_LOCK, db_session() as db:
         db.execute("UPDATE worker_status SET state=?,lastSeen=?,taskId=?,sphereId=?,"
                    "kind=?,lastError=? WHERE name=?", (state, now(),
                    task.get("id") if task else None, task.get("sphereId") if task else None,
@@ -201,7 +215,7 @@ def worker_state(agent, state, task=None, error=None):
 
 
 def list_workers():
-    with connect() as db:
+    with db_session() as db:
         rows = db.execute("SELECT * FROM worker_status ORDER BY name").fetchall()
     current = time.time()
     workers = []
@@ -224,7 +238,7 @@ def list_workers():
 def claim_task(agent):
     kinds = AGENTS[agent]
     placeholders = ",".join("?" for _ in kinds)
-    with DB_LOCK, connect() as db:
+    with DB_LOCK, db_session() as db:
         db.execute("BEGIN IMMEDIATE")
         row = db.execute("SELECT * FROM tasks WHERE status='queued' AND agent=? "
                          + "AND kind IN (" + placeholders + ") "
@@ -241,7 +255,7 @@ def claim_task(agent):
 
 
 def finish_task(task_id, state, result=None, error=None):
-    with DB_LOCK, connect() as db:
+    with DB_LOCK, db_session() as db:
         db.execute("UPDATE tasks SET status=?,result=?,error=?,completedAt=? WHERE id=?",
                    (state, result, error, now(), task_id))
 
@@ -356,11 +370,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, {"workers": list_workers(),
                                         "sharedSphereId": read_sphere().get("sphereId")})
         if self.path == "/tasks":
-            with connect() as db:
+            with db_session() as db:
                 rows = db.execute("SELECT * FROM tasks ORDER BY createdAt DESC LIMIT 100").fetchall()
             return self.send_json(200, {"tasks": [dict(row) for row in rows]})
         if self.path.startswith("/tasks/"):
-            with connect() as db:
+            with db_session() as db:
                 row = db.execute("SELECT * FROM tasks WHERE id=?",
                                  (self.path[len("/tasks/"):],)).fetchone()
             return self.send_json(200 if row else 404,
@@ -391,7 +405,7 @@ class Handler(BaseHTTPRequestHandler):
         task = {"id": str(uuid.uuid4()), "agent": agent,
                 "description": description, "kind": kind,
                 "status": "queued", "createdAt": now()}
-        with DB_LOCK, connect() as db:
+        with DB_LOCK, db_session() as db:
             db.execute("INSERT INTO tasks (id,agent,description,kind,status,createdAt) "
                        "VALUES (?,?,?,?,?,?)",
                        (task["id"], agent, description, kind, "queued", task["createdAt"]))
