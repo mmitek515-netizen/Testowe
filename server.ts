@@ -814,8 +814,18 @@ const DEFAULT_SEED_MISSIONS = [
 async function readMissions(): Promise<any[]> {
   try {
     if (!fs.existsSync(MISSIONS_FILE)) {
-      await writeMissionsAtomic(DEFAULT_SEED_MISSIONS);
-      return DEFAULT_SEED_MISSIONS;
+      // First boot on Debian uses an empty persistent Docker volume.
+      // Keep the actual mission assignments committed with the application.
+      const bundledMissions = path.join(APP_ROOT, 'missions.json');
+      let initial = DEFAULT_SEED_MISSIONS;
+      try {
+        const bundled = JSON.parse(await fs.promises.readFile(bundledMissions, 'utf-8'));
+        if (Array.isArray(bundled) && bundled.length > 0) initial = bundled;
+      } catch (error) {
+        console.warn('Bundled missions unavailable, using default definitions:', error);
+      }
+      await writeMissionsAtomic(initial);
+      return initial;
     }
     const data = await fs.promises.readFile(MISSIONS_FILE, 'utf-8');
     const parsed = JSON.parse(data);
