@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { MashyValue } from './MashyCode';
+import { encodeMashy } from '../core/mashyCode';
 import { Compass, Sparkles, RefreshCw, Layers, ArrowRight } from 'lucide-react';
 import { TopologicalInfinityEngine } from '../core/svlEngine';
 
@@ -206,14 +208,14 @@ export default function TopologicalVisualizer({ onParamChange }: Props) {
             <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800">
               <div className="text-neutral-500 font-mono text-[11px]">compact_start:</div>
               <div className="text-cyan-400 font-mono font-semibold text-sm mt-0.5">
-                {details.compact_start.toFixed(6)}
+                <MashyValue value={details.compact_start.toFixed(6)} size={12} />
               </div>
               <div className="text-[10px] text-neutral-500 mt-1">x / (1 + |x|)</div>
             </div>
             <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800">
               <div className="text-neutral-500 font-mono text-[11px]">compact_end:</div>
               <div className="text-cyan-400 font-mono font-semibold text-sm mt-0.5">
-                {details.compact_end.toFixed(6)}
+                <MashyValue value={details.compact_end.toFixed(6)} size={12} />
               </div>
               <div className="text-[10px] text-neutral-500 mt-1">x / (1 + |x|)</div>
             </div>
@@ -223,7 +225,7 @@ export default function TopologicalVisualizer({ onParamChange }: Props) {
           <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-900/40 text-neutral-300 text-xs space-y-1">
             <div className="text-cyan-300 font-semibold flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Algebra 97 – Rzutowanie Stereograficzne</span>
+              <span>Algebra Mashy – Rzutowanie Stereograficzne</span>
             </div>
             <p className="text-[11px] text-neutral-400">
               <code className="text-cyan-200">f(x) = x / (1.0 + |x|)</code> mapuje continuum (-∞, +∞) w idealny zbiór zwarty [-1.0, 1.0].
@@ -241,7 +243,7 @@ export default function TopologicalVisualizer({ onParamChange }: Props) {
               </span>
             </div>
             <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/50">
-              c = {details.c.toFixed(6)}
+              c = <MashyValue value={details.c.toFixed(6)} size={12} />
             </span>
           </div>
 
@@ -323,13 +325,13 @@ export default function TopologicalVisualizer({ onParamChange }: Props) {
 
               {/* Labels */}
               <text x={(originX + cornerX) / 2} y={originY + 14} fill="#38bdf8" fontSize="10" fontFamily="monospace" textAnchor="middle">
-                a = {details.a.toFixed(3)}
+                a = {encodeMashy(details.a.toFixed(3))}
               </text>
               <text x={cornerX + 16} y={(cornerY + topY) / 2 + 3} fill="#a855f7" fontSize="10" fontFamily="monospace" textAnchor="start">
-                b = {details.b.toFixed(3)}
+                b = {encodeMashy(details.b.toFixed(3))}
               </text>
               <text x={(originX + topX) / 2 - 14} y={(originY + topY) / 2 - 8} fill="#34d399" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
-                c = {details.c.toFixed(4)}
+                c = <MashyValue value={encodeMashy(details.c.toFixed(4))} size={12} />
               </text>
             </svg>
           </div>
@@ -338,15 +340,15 @@ export default function TopologicalVisualizer({ onParamChange }: Props) {
           <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-800 text-[11px] font-mono">
             <div className="text-neutral-400">
               <span className="text-sky-400 font-bold">a</span> = |end - start|<br/>
-              <span className="text-neutral-200">= {details.a.toFixed(4)}</span>
+              <span className="text-neutral-200">= <MashyValue value={details.a.toFixed(4)} size={12} /></span>
             </div>
             <div className="text-neutral-400">
-              <span className="text-purple-400 font-bold">b</span> = |s·e| + 0.5<br/>
-              <span className="text-neutral-200">= {details.b.toFixed(4)}</span>
+              <span className="text-purple-400 font-bold">b</span> = |s·e| + <MashyValue value={'0.5'} size={10} /><br/>
+              <span className="text-neutral-200">= <MashyValue value={details.b.toFixed(4)} size={12} /></span>
             </div>
             <div className="text-neutral-400">
               <span className="text-emerald-400 font-bold">c</span> = √(a² + b²)<br/>
-              <span className="text-emerald-300 font-bold">= {details.c.toFixed(6)}</span>
+              <span className="text-emerald-300 font-bold">= <MashyValue value={details.c.toFixed(6)} size={12} /></span>
             </div>
           </div>
         </div>

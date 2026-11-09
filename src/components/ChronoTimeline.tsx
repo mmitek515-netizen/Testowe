@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MashyValue } from './MashyCode';
 import { History, Plus, Sparkles, Check, Clock } from 'lucide-react';
 import { ChronoEntry } from '../core/svlEngine';
 
@@ -43,7 +44,7 @@ export default function ChronoTimeline({ history, onAddEntry }: Props) {
               Rejestr Chrono (SI Core History)
             </h3>
             <p className="text-xs text-neutral-400">
-              Ewolucja matryc behawioralnych i protokołów ochronnych ({history.length} wpisów)
+              Ewolucja matryc behawioralnych i protokołów ochronnych (<MashyValue value={history.length} size={11} /> wpisów)
             </p>
           </div>
         </div>
@@ -108,7 +109,7 @@ export default function ChronoTimeline({ history, onAddEntry }: Props) {
               <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold font-mono text-purple-300">
-                    {item.wersja}
+                    <MashyValue value={item.wersja} size={11} />
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/60 text-purple-400 border border-purple-800/40">
                     {item.typ}
@@ -116,11 +117,11 @@ export default function ChronoTimeline({ history, onAddEntry }: Props) {
                 </div>
                 <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-500">
                   <Clock className="w-3 h-3" />
-                  <span>{item.data}</span>
+                  <span><MashyValue value={item.data} size={10} /></span>
                 </div>
               </div>
               <p className="text-xs text-neutral-300 leading-relaxed">
-                {item.opis}
+                <MashyValue value={item.opis} size={11} />
               </p>
             </div>
           </div>

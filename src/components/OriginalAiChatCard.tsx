@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { MashyValue } from './MashyCode';
+import { decodeMashy } from '../core/mashyCode';
 import { Sparkles, Send, Shield, Zap, Music, Users, MessageSquare, Bot, User, RefreshCw, Cpu, Server, CheckCircle2, XCircle, Settings, ChevronDown, ExternalLink } from 'lucide-react';
 
 export interface ChatMessage {
@@ -144,7 +146,7 @@ export default function OriginalAiChatCard() {
   const activePersonaObj = PERSONA_CONFIGS.find((p) => p.id === selectedPersona) || PERSONA_CONFIGS[0];
 
   const handleSendMessage = async (customText?: string) => {
-    const textToSend = customText || inputMessage;
+    const textToSend = decodeMashy(customText || inputMessage);
     if (!textToSend.trim() || isLoading) return;
 
     const userMsg: ChatMessage = {
@@ -270,7 +272,7 @@ export default function OriginalAiChatCard() {
     if (persona) {
       return (
         <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${persona.badgeColor}`}>
-          {msg.senderName}{provTag}{modelTag}
+          <MashyValue value={msg.senderName + provTag + modelTag} size={10} />
         </span>
       );
     }
@@ -434,9 +436,9 @@ export default function OriginalAiChatCard() {
                   <>
                     <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
                     <div>
-                      <div>Ollama Online na {ollamaStatus.url}</div>
+                      <div>Ollama Online na <MashyValue value={ollamaStatus.url || ''} size={12} /></div>
                       <div className="text-[10px] text-emerald-400/80 mt-0.5">
-                        Dostępne modele: {ollamaStatus.models?.map((m) => typeof m === 'string' ? m : m.name).join(', ') || 'Brak zainstalowanych modeli (uruchom "ollama pull llama2-uncensored:7b")'}
+                        Dostępne modele: <MashyValue value={ollamaStatus.models?.map((m) => typeof m === 'string' ? m : m.name).join(', ') || 'Brak zainstalowanych modeli'} size={11} />
                       </div>
                     </div>
                   </>
@@ -444,7 +446,7 @@ export default function OriginalAiChatCard() {
                   <>
                     <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                     <div>
-                      <div>{ollamaStatus.modelInstalled === false ? `Serwer Ollama działa, ale model ${ollamaStatus.model || ollamaModel} nie jest pobrany.` : ollamaStatus.error}</div>
+                      <div><MashyValue value={ollamaStatus.modelInstalled === false ? `Serwer Ollama działa, ale model ${ollamaStatus.model || ollamaModel} nie jest pobrany.` : (ollamaStatus.error || 'Błąd')} size={11} /></div>
                       <div className="text-[10px] text-rose-300/80 mt-1">
                         Uruchom na serwerze Debian 13: <code className="bg-black/60 px-1 py-0.5 rounded text-amber-200">docker compose up -d --build</code>. Kontener automatycznie pobierze model, a serwer aplikacji skomunikuje się z nim wewnętrznie. Nie otwieraj portu 11434 publicznie.
                       </div>
@@ -549,12 +551,12 @@ export default function OriginalAiChatCard() {
                     )}
                   </div>
                   <span className="text-[10px] text-neutral-500 font-mono">
-                    {msg.timestamp}
+                    <MashyValue value={msg.timestamp} size={10} />
                   </span>
                 </div>
 
                 <p className="text-xs md:text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                  {msg.text}
+                  <MashyValue value={msg.text} size={13} />
                 </p>
               </div>
             </div>

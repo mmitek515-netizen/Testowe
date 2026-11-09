@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { MashyValue } from './MashyCode';
+import { encodeMashy } from '../core/mashyCode';
 import { Globe2, Pause, Play, Plus, Minus, RotateCcw, Activity, Radar, Layers3, Bot, Satellite, RefreshCw } from 'lucide-react';
 
 type Body = { id: string; name: string; radius: number; size: number; color: string; period: number; phase: number; type: string; distance: string; description: string };
@@ -75,7 +77,7 @@ export default function SphericalScopeVisualizer() {
     if (o.source === 'ollamaModels') {
       return o.data?.selectedInstalled === true
         ? { healthy: true, label: 'MODEL ZAINSTALOWANY' }
-        : { healthy: false, label: 'BRAK MODELU 8B' };
+        : { healthy: false, label: 'BRAK MODELU' };
     }
     if (o.source === 'ollamaRunning') {
       const loaded = Array.isArray(o.data?.runningModels) ? o.data.runningModels : [];
@@ -93,7 +95,7 @@ export default function SphericalScopeVisualizer() {
           <Globe2 className="w-6 h-6 text-cyan-400"/>
           <div>
             <h3 className="text-base sm:text-lg tracking-[.12em] font-semibold text-cyan-100">GALACTIC NAVIGATION · SOL</h3>
-            <p className="text-[11px] text-cyan-400/70 font-mono">UKŁAD SŁONECZNY / MAPA TAKTYCZNA / SPAA 360°</p>
+            <p className="text-[11px] text-cyan-400/70 font-mono">UKŁAD SŁONECZNY / MAPA TAKTYCZNA / SPAA MASHY</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -136,23 +138,23 @@ export default function SphericalScopeVisualizer() {
               {showLabels&&<text x={node.x+18} y={node.y+4} fontSize="13" fill="#9ee9f5">{node.id.toUpperCase()}</text>}
             </g>)}
           </g>
-          <text x="24" y="32" fill="#70c5e9" fontSize="12" letterSpacing="3">SYSTEM SOL · MAPA POGLĄDOWA</text>
+          <text x="24" y="32" fill="#70c5e9" fontSize="12" letterSpacing="3">SYSTEM SOL · MASHY</text>
           <text x="24" y="680" fill="#6e8aa5" fontSize="11">Odległości i rozmiary nie są w skali · animacja ilustracyjna</text>
         </svg>
-        <div className="absolute right-3 top-3 rounded-lg border border-cyan-500/20 bg-[#071527]/90 px-3 py-2 text-[10px] font-mono text-cyan-300">ZOOM {Math.round(zoom*100)}%</div>
+        <div className="absolute right-3 top-3 rounded-lg border border-cyan-500/20 bg-[#071527]/90 px-3 py-2 text-[10px] font-mono text-cyan-300">ZOOM <MashyValue value={Math.round(zoom*100)} size={10} />%</div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 border-t border-cyan-500/20">
         <div className="p-4 sm:p-5 border-b md:border-b-0 md:border-r border-cyan-500/20">
           <div className="text-[10px] uppercase tracking-[.22em] text-cyan-400 mb-2">Wybrany obiekt</div>
           <h4 className="text-xl font-semibold text-white">{current.name}</h4>
-          <p className="text-sm text-slate-400 mt-1">{current.type} · {current.distance} od Słońca</p>
+          <p className="text-sm text-slate-400 mt-1">{current.type} · <MashyValue value={current.distance} size={13} /> od Słońca</p>
           <p className="text-sm text-slate-300 mt-3">{current.description}</p>
           <div className="flex flex-wrap gap-2 mt-4">{bodies.map(b=><button key={b.id} onClick={()=>setSelected(b.id)} className={`text-xs px-2.5 py-1.5 rounded-md border ${selected===b.id?'border-cyan-400 bg-cyan-500/20 text-cyan-100':'border-slate-700 text-slate-400 hover:border-cyan-700'}`}>{b.name}</button>)}</div>
         </div>
         <div className="p-4 sm:p-5">
           <div className="flex items-center gap-2 text-cyan-300 text-xs uppercase tracking-widest"><Radar size={16}/> Sferyczna telemetria SPAA</div>
-          <div className="flex items-center gap-2 mt-3 text-sm text-slate-300"><Activity size={15}/>{observations.length? `${ok}/${observations.length} źródeł odpowiada`:'Oczekiwanie na pomiar backendu'}</div>
-          <p className="text-xs text-slate-500 mt-2">{snapshot?.timestamp?'Ostatni pomiar: '+new Date(snapshot.timestamp).toLocaleString('pl-PL'):'Brak zapisanego pomiaru'}{statusError?' · '+statusError:''}</p>
+          <div className="flex items-center gap-2 mt-3 text-sm text-slate-300"><Activity size={15}/>{observations.length? <><MashyValue value={ok} size={13} /> / <MashyValue value={observations.length} size={13} /> źródeł odpowiada</>:'Oczekiwanie na pomiar backendu'}</div>
+          <p className="text-xs text-slate-500 mt-2">{snapshot?.timestamp? <>Ostatni pomiar: <MashyValue value={new Date(snapshot.timestamp).toLocaleString('pl-PL')} size={11} /></>:'Brak zapisanego pomiaru'}{statusError?' · '+statusError:''}</p>
           <div className="space-y-2 mt-3">{observations.map((o:any) => {
             const health = serviceState(o);
             return <div key={o.source} className="flex justify-between gap-3 text-xs rounded-md bg-slate-900/70 border border-slate-800 p-2"><span className="text-slate-300">{o.source}</span><span className={health.healthy?'text-emerald-400':'text-amber-400'}>{health.label}</span></div>;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Activity, Terminal, ShieldAlert, Cpu, MessageSquare, Target } from 'lucide-react';
+import { MashyValue } from './MashyCode';
 
 interface Props {
   activeTab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit';
@@ -34,7 +35,7 @@ export default function Navbar({
                   SVL KERNEL
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-300">
-                  {sysVersion}
+                  <MashyValue value={sysVersion} size={10} />
                 </span>
               </div>
               <p className="text-[11px] text-neutral-400 hidden sm:block">
