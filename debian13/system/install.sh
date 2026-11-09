@@ -30,6 +30,7 @@ for module in server.py work_store.py original_agents.py alex_bridge.py alex_han
   install -o root -g root -m 0644 "$SOURCE_DIR/$module" "/usr/local/lib/debian13/system/$module"
 done
 install -o root -g root -m 0644 "$SPAA_SOURCE" /usr/local/lib/debian13/system/spaa_daemon.py
+install -o root -g root -m 0644 "$SOURCE_DIR/../../integrations/agent-rest/systemd_observer.py" /usr/local/lib/debian13/system/systemd_observer.py
 install -d -o debian13 -g debian13 -m 0750 /var/lib/debian13/workspace
 install -d -o root -g debian13 -m 0750 /etc/debian13
 
