@@ -51,12 +51,27 @@ unset token
 model="$(grep -E '^OLLAMA_MODEL=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
 model="${model:-llama2-uncensored:7b}"
 
-echo "Starting private Ollama 7B + SVL control backend + local SQLite worker..."
-docker compose --profile agents up -d --build
+# Stage 1: Ollama must be independent of the React/Node image build.
+# If npm install fails, the user's model must still start and remain usable.
+echo "Stage 1/2: Starting private Ollama before building the web application..."
+docker compose up -d ollama
 
 echo "Downloading/verifying model: $model"
 docker compose exec -T ollama ollama pull "$model"
 docker compose exec -T ollama ollama show "$model"
+docker compose exec -T ollama ollama list
+echo "Ollama is started; web app build is a separate step."
+
+# Stage 2: launch the application and optional local task worker.
+echo "Stage 2/2: Building SVL GUI/backend and starting local task worker..."
+if ! docker compose --profile agents up -d --build ai-linux-control agent-rest; then
+  echo >&2 "The Node/React Docker image failed to build, but Ollama should still be running."
+  echo >&2 "To inspect the actual npm error, run:"
+  echo >&2 "docker compose build --no-cache --progress=plain ai-linux-control 2>&1 | tee npm-build.log"
+  echo >&2 "Send the last lines of npm-build.log (do not include .env or access tokens)."
+  docker compose ps || true
+  exit 1
+fi
 
 echo "Checking backend and private worker..."
 app_port="$(grep -E '^APP_PORT=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
