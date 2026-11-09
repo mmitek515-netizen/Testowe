@@ -50,7 +50,7 @@ jobs:
       - name: Install packages
         run: npm install --no-audit --no-fund
       - name: Mashy visual numeral codec tests
-        run: npx tsx --test src/core/mashyCode.test.ts
+        run: npx tsx --test src/core/mashyCode.test.ts src/core/visionImage.test.ts
       - name: TypeScript validation
         run: npm run lint
       - name: Build SVL
