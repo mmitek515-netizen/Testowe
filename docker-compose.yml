@@ -1,7 +1,37 @@
+# Debian 13 / Docker Compose. Ollama stays inside the private Compose network.
+# Launch with: docker compose up -d --build
 services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull ${OLLAMA_MODEL:-dolphin3:8b}"]
+
   ai-linux-control:
     build: .
     restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     env_file:
@@ -10,8 +40,13 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-dolphin3:8b}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      MISSIONS_FILE: /data/missions.json
+    volumes:
+      - missions_data:/data
+
+volumes:
+  ollama_models:
+  missions_data:
