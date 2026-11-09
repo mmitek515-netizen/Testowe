@@ -16,7 +16,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'dolphin3:8b';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'Thox-ai/thoxopen-8b-heretic:q4_k_m';
 
 app.get('/api/health', (_req, res) => res.json({
   status: 'ok',
