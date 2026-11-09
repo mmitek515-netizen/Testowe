@@ -30,7 +30,7 @@
     "title": "01 Debian 13 bootable base + KDE",
     "description": "Przygotowanie bootowalnej bazy systemu Debian 13 (Trixie) ze środowiskiem graficznym KDE Plasma dla stacji roboczej AI.",
     "targetAgent": "Aurelius",
-    "assignedAgent": null,
+    "assignedAgent": "Aurelius",
     "status": "planned",
     "progress": 0,
     "priority": "High",
@@ -39,6 +39,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Aurelius. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Zdefiniowano specyfikację instalatora ISO Debiana 13."
@@ -51,7 +55,7 @@
     "title": "02 Ollama 8B chat/status",
     "description": "Wdrożenie i diagnostyka lokalnego backendu inferencji Ollama z modelem 8B oraz obsługa fallbacku telemetrii.",
     "targetAgent": "Alex",
-    "assignedAgent": null,
+    "assignedAgent": "Alex",
     "status": "planned",
     "progress": 0,
     "priority": "Medium",
@@ -60,6 +64,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Alex. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Zintegrowano endpointy /api/ollama/status i /api/ollama/chat w backendzie."
@@ -72,7 +80,7 @@
     "title": "03 persistent backend daemon worker/queue",
     "description": "Architektura trwałego daemona kolejki zadań asynchronicznych w standardzie SPAA do długotrwałych obliczeń.",
     "targetAgent": "Alex",
-    "assignedAgent": null,
+    "assignedAgent": "Alex",
     "status": "planned",
     "progress": 0,
     "priority": "High",
@@ -81,6 +89,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Alex. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Przygotowano specyfikację SPAA worker orchestration."
@@ -93,7 +105,7 @@
     "title": "04 KDE Plasma GUI responsive",
     "description": "Responsywny interfejs graficzny KDE Plasma zoptymalizowany pod kątem telemetrii sferycznej i mapy układu Sol.",
     "targetAgent": "Astyria",
-    "assignedAgent": null,
+    "assignedAgent": "Astyria",
     "status": "planned",
     "progress": 0,
     "priority": "Medium",
@@ -102,6 +114,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Astyria. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Utworzono komponent nawigacji galaktycznej i układu słonecznego."
@@ -114,7 +130,7 @@
     "title": "05 administrative terminal/Python audit",
     "description": "Bezpieczny terminal administracyjny z audytem wykonania w środowisku Python oraz izolacją zmiennych tożsamości SVL.",
     "targetAgent": "Aurelius",
-    "assignedAgent": null,
+    "assignedAgent": "Aurelius",
     "status": "planned",
     "progress": 0,
     "priority": "Critical",
@@ -123,6 +139,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Aurelius. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Zaimplementowano moduł SVLProtectedVariable oraz audyt kryminalistyczny zablokowanych repozytoriów."
@@ -135,7 +155,7 @@
     "title": "06 long term memory/logs/telemetry",
     "description": "Rejestracja długoterminowej pamięci kognitywnej, rejestru Chrono oraz telemetrii rezonansowej 880Hz w terapii Milieu.",
     "targetAgent": "Aria",
-    "assignedAgent": null,
+    "assignedAgent": "Aria",
     "status": "planned",
     "progress": 0,
     "priority": "Medium",
@@ -144,6 +164,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Aria. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Aktywny rejestr Chrono historii SI oraz pomiary SPAA."
@@ -156,7 +180,7 @@
     "title": "07 interactive map global sync",
     "description": "Globalna synchronizacja współrzędnych i orbit planetarnych w przestrzeni SPAA 360 stopni.",
     "targetAgent": "Astyria",
-    "assignedAgent": null,
+    "assignedAgent": "Astyria",
     "status": "planned",
     "progress": 0,
     "priority": "Low",
@@ -165,6 +189,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Astyria. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Zintegrowano sferyczny widok nawigacji solarnej w czasie rzeczywistym."
@@ -177,7 +205,7 @@
     "title": "08 test and release Debian ISO",
     "description": "Końcowe testy integralności, walidacja obrazu ISO systemu oraz procedury wydania wersji produkcyjnej.",
     "targetAgent": "Aria",
-    "assignedAgent": null,
+    "assignedAgent": "Aria",
     "status": "planned",
     "progress": 0,
     "priority": "High",
@@ -186,6 +214,10 @@
     "epicUrl": "https://github.com/mmitek515-netizen/Testowe/issues/1",
     "createdAt": "2026-11-09T13:00:00.000Z",
     "logs": [
+      {
+        "timestamp": "2026-11-09T21:00:00.000Z",
+        "message": "Przypisano plan misji agentowi Aria. Stan executora: niepodłączony. Żadna praca nie została uruchomiona."
+      },
       {
         "timestamp": "2026-11-09T13:00:00.000Z",
         "message": "Oczekuje na ukończenie etapów bazowych 00-07."
