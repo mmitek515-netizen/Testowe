@@ -106,20 +106,36 @@ export default function OriginalAiChatCard() {
 
   const checkOllamaHealth = async () => {
     setIsCheckingOllama(true);
+    setOllamaStatus(null);
     try {
-      const res = await fetch('/api/ollama/status', { method: 'GET' });
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await res.json();
-        if (typeof data.url === 'string') setOllamaUrl(data.url);
-        if (typeof data.model === 'string') setOllamaModel(data.model);
-        setOllamaStatus(data);
-      } else {
-        const rawText = await res.text();
-        setOllamaStatus({ online: false, error: `Odpowiedź serwera nie jest w formacie JSON (${res.status}): ${rawText.slice(0, 100)}` });
+      // This endpoint must be served by Node/Express, not Vite's SPA fallback.
+      const res = await fetch('/api/ollama/status', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      const contentType = (res.headers.get('content-type') || '').toLowerCase();
+      if (!contentType.includes('application/json')) {
+        // A 200 HTML document is not an Ollama response and must never look like a healthy API.
+        setOllamaStatus({
+          online: false,
+          error: `Błąd routingu API: /api/ollama/status zwróciło HTTP ${res.status} jako HTML zamiast JSON. Podgląd Google AI Studio kieruje żądanie do strony aplikacji, a nie do serwera Node/Express. Sprawdź działanie backendu oraz adres API; samo wpisanie modelu nie uruchamia Ollamy.`,
+        });
+        return;
       }
-    } catch (e: any) {
-      setOllamaStatus({ online: false, error: e.message });
+      const data = await res.json();
+      if (typeof data.url === 'string') setOllamaUrl(data.url);
+      if (typeof data.model === 'string') setOllamaModel(data.model);
+      setOllamaStatus({
+        ...data,
+        online: res.ok && data.online === true,
+        error: data.error || (res.ok ? undefined : `Błąd API Ollama (HTTP ${res.status})`),
+      });
+    } catch (error: unknown) {
+      setOllamaStatus({
+        online: false,
+        error: `Nie można odpytać backendu SVL: ${error instanceof Error ? error.message : String(error)}`,
+      });
     } finally {
       setIsCheckingOllama(false);
     }
