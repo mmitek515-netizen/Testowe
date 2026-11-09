@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Debian13StatusCard from './Debian13StatusCard';
 import {
   Target,
   Users,
@@ -172,6 +173,8 @@ export default function MissionControl() {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900/90 shadow-2xl backdrop-blur-md overflow-hidden flex flex-col space-y-6 p-4 sm:p-6">
       
+      <Debian13StatusCard />
+
       {/* Top Banner & Header */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-5 border-b border-neutral-800">
         <div className="flex items-center gap-3.5">

@@ -932,6 +932,82 @@ app.post('/api/missions/:id/start', async (req, res) => {
   });
 });
 
+// Debian 13 runtime bridge: strictly read-only, server-to-server, no browser token.
+// Codespaces/Google AI Studio frontend must not pretend localhost means the Debian host.
+const DEBIAN13_SYSTEM_API_URL = (process.env.DEBIAN13_SYSTEM_API_URL || '').trim().replace(/\\/$/, '');
+const DEBIAN13_API_TOKEN = process.env.DEBIAN13_API_TOKEN || '';
+
+function validatedDebian13Origin(): string {
+  const parsed = new URL(DEBIAN13_SYSTEM_API_URL);
+  // Narrow allowlist prevents accidental SSRF or plaintext transport to public hosts.
+  if (parsed.protocol !== 'http:' ||
+      !['debian13-system', '127.0.0.1', 'localhost'].includes(parsed.hostname) ||
+      Boolean(parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash)) {
+    throw new Error('debian13_origin_invalid');
+  }
+  return parsed.origin;
+}
+
+async function getDebian13Json(route: '/v1/diagnostics' | '/v1/profiles' | '/api/v1/tasks'): Promise<Record<string, any>> {
+  const origin = validatedDebian13Origin();
+  const result = await fetch(origin + route, {
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + DEBIAN13_API_TOKEN, 'Accept': 'application/json' },
+    redirect: 'error',
+    signal: AbortSignal.timeout(3500),
+  });
+  if (!result.ok) throw new Error('debian13_http_' + result.status);
+  const body = await result.text();
+  if (body.length > 131072) throw new Error('debian13_response_too_large');
+  const data: unknown = JSON.parse(body);
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('debian13_invalid_json');
+  }
+  return data as Record<string, any>;
+}
+
+app.get('/api/debian13/status', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const checkedAt = new Date().toISOString();
+  if (!DEBIAN13_SYSTEM_API_URL || DEBIAN13_API_TOKEN.length < 32) {
+    return res.json({
+      state: 'not-configured', configured: false, checkedAt,
+      message: 'Wymagane DEBIAN13_SYSTEM_API_URL i prywatny DEBIAN13_API_TOKEN (min. 32 znaki).',
+      originalAgentsVerified: false,
+    });
+  }
+  try {
+    const [diag, profiles, tasks] = await Promise.all([
+      getDebian13Json('/v1/diagnostics'),
+      getDebian13Json('/v1/profiles'),
+      getDebian13Json('/api/v1/tasks'),
+    ]);
+    if (diag.service !== 'debian13-system' || !Array.isArray(tasks.tasks)) {
+      throw new Error('debian13_invalid_contract');
+    }
+    return res.json({
+      state: 'online', configured: true, checkedAt, service: 'debian13-system',
+      runtime: 'Debian 13 userspace API (container or host); OS boot NOT verified',
+      effectiveUid: typeof diag.effectiveUid === 'number' ? diag.effectiveUid : null,
+      workspaceWritable: diag.workspaceWritable === true,
+      modelProviderConfigured: profiles.providerConfigured === true,
+      modelInferenceVerified: false,
+      taskEntriesShown: tasks.tasks.length, taskEntriesLimit: 100,
+      storage: tasks.storage === 'sqlite' ? 'sqlite' : 'unknown',
+      workersRunning: typeof tasks.workersRunning === 'number' ? tasks.workersRunning : 0,
+      originalAgentsVerified: false,
+    });
+  } catch (error) {
+    // Do not leak URLs, stack traces, internal service data or bearer tokens to the browser.
+    console.warn('Debian 13 runtime unavailable:', error instanceof Error ? error.name : 'unknown');
+    return res.json({
+      state: 'offline', configured: true, checkedAt,
+      message: 'Usługa Debian 13 nie odpowiada poprawnie lub wymaga naprawy konfiguracji.',
+      originalAgentsVerified: false,
+    });
+  }
+});
+
 // Catch-all route for any unhandled /api/* requests to ensure JSON response instead of HTML fallback
 app.all('/api/*', (_req, res) => {
   res.status(404).json({ error: 'Ścieżka API nie została znaleziona.' });
