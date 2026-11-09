@@ -83,7 +83,7 @@ export default function OriginalAiChatCard() {
   const [ollamaUrl, setOllamaUrl] = useState<string>('http://127.0.0.1:11434');
   const [ollamaModel, setOllamaModel] = useState<string>('dolphin3:8b');
   const [showOllamaConfig, setShowOllamaConfig] = useState<boolean>(false);
-  const [ollamaStatus, setOllamaStatus] = useState<{ online?: boolean; error?: string; url?: string; models?: any[] } | null>(null);
+  const [ollamaStatus, setOllamaStatus] = useState<{ online?: boolean; error?: string; url?: string; model?: string; modelInstalled?: boolean; models?: (string | { name: string })[] } | null>(null);
   const [isCheckingOllama, setIsCheckingOllama] = useState<boolean>(false);
 
   const [inputMessage, setInputMessage] = useState('');
@@ -107,14 +107,12 @@ export default function OriginalAiChatCard() {
   const checkOllamaHealth = async () => {
     setIsCheckingOllama(true);
     try {
-      const res = await fetch('/api/ollama/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ollamaUrl }),
-      });
+      const res = await fetch('/api/ollama/status', { method: 'GET' });
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
         const data = await res.json();
+        if (typeof data.url === 'string') setOllamaUrl(data.url);
+        if (typeof data.model === 'string') setOllamaModel(data.model);
         setOllamaStatus(data);
       } else {
         const rawText = await res.text();
@@ -385,8 +383,9 @@ export default function OriginalAiChatCard() {
                 <input
                   type="text"
                   value={ollamaUrl}
-                  onChange={(e) => setOllamaUrl(e.target.value)}
-                  placeholder="http://127.0.0.1:11434"
+                  readOnly
+                  title="Adres jest konfigurowany po stronie serwera (OLLAMA_BASE_URL), nie w przeglądarce"
+                  placeholder="Konfiguracja serwera: OLLAMA_BASE_URL"
                   className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-700 rounded-lg text-neutral-200 font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -398,27 +397,30 @@ export default function OriginalAiChatCard() {
                 <input
                   type="text"
                   value={ollamaModel}
-                  onChange={(e) => setOllamaModel(e.target.value)}
-                  placeholder="dolphin3:8b"
+                  readOnly
+                  title="Model wybierany w .env serwera (OLLAMA_MODEL), nie w przeglądarce"
+                  placeholder="Konfiguracja serwera: OLLAMA_MODEL"
                   className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-700 rounded-lg text-neutral-200 font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
             </div>
 
+            <p className="text-[11px] text-amber-200/80">Adres i model są ustawiane na serwerze Debian 13 w pliku .env. Pole powyżej pokazuje konfigurację backendu po naciśnięciu „Testuj połączenie”. Google AI Studio nie uruchamia Ollamy 8B wewnątrz podglądu.</p>
+
             {/* Health status */}
             {ollamaStatus && (
               <div className={`p-2.5 rounded-lg text-xs font-mono flex items-start gap-2 ${
-                ollamaStatus.online
+                ollamaStatus.online && ollamaStatus.modelInstalled !== false
                   ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-300'
                   : 'bg-rose-950/40 border border-rose-500/40 text-rose-300'
               }`}>
-                {ollamaStatus.online ? (
+                {ollamaStatus.online && ollamaStatus.modelInstalled !== false ? (
                   <>
                     <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
                     <div>
                       <div>Ollama Online na {ollamaStatus.url}</div>
                       <div className="text-[10px] text-emerald-400/80 mt-0.5">
-                        Dostępne modele: {ollamaStatus.models?.map((m: any) => m.name).join(', ') || 'Brak zainstalowanych modeli (uruchom "ollama pull dolphin3:8b")'}
+                        Dostępne modele: {ollamaStatus.models?.map((m) => typeof m === 'string' ? m : m.name).join(', ') || 'Brak zainstalowanych modeli (uruchom "ollama pull dolphin3:8b")'}
                       </div>
                     </div>
                   </>
@@ -426,9 +428,9 @@ export default function OriginalAiChatCard() {
                   <>
                     <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                     <div>
-                      <div>{ollamaStatus.error}</div>
+                      <div>{ollamaStatus.modelInstalled === false ? `Serwer Ollama działa, ale model ${ollamaStatus.model || ollamaModel} nie jest pobrany.` : ollamaStatus.error}</div>
                       <div className="text-[10px] text-rose-300/80 mt-1">
-                        Wskazówka: Aby uruchomić lokalnego Ollama z modelem 8b (uncensored), wykonaj na swojej maszynie: <code className="bg-black/60 px-1 py-0.5 rounded text-amber-200">ollama run dolphin3:8b</code> lub ustaw flagę CORS <code className="bg-black/60 px-1 py-0.5 rounded text-amber-200">OLLAMA_ORIGINS="*"</code>.
+                        Uruchom na serwerze Debian 13: <code className="bg-black/60 px-1 py-0.5 rounded text-amber-200">docker compose up -d --build</code>. Kontener automatycznie pobierze model, a serwer aplikacji skomunikuje się z nim wewnętrznie. Nie otwieraj portu 11434 publicznie.
                       </div>
                     </div>
                   </>
