@@ -152,6 +152,7 @@ async function getOllamaStatusHandler(_req: express.Request, res: express.Respon
       const installedModels = modelList.map(m => (typeof m === 'string' ? m : m.name));
       return res.json({
         online: true,
+        url: OLLAMA_BASE_URL,
         model: OLLAMA_MODEL,
         modelInstalled: installedModels.includes(OLLAMA_MODEL),
         models: installedModels,
@@ -159,6 +160,8 @@ async function getOllamaStatusHandler(_req: express.Request, res: express.Respon
     } else {
       return res.status(response.status).json({
         online: false,
+        url: OLLAMA_BASE_URL,
+        model: OLLAMA_MODEL,
         error: `Ollama server returned HTTP ${response.status}: ${response.statusText}`,
       });
     }
@@ -169,6 +172,8 @@ async function getOllamaStatusHandler(_req: express.Request, res: express.Respon
       : '';
     return res.status(503).json({
       online: false,
+      url: OLLAMA_BASE_URL,
+      model: OLLAMA_MODEL,
       error: `Nie można połączyć się z serwerem Ollama (${err.message || 'Brak odpowiedzi'}).${previewNote}`,
     });
   }
