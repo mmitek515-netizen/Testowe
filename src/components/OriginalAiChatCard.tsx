@@ -80,7 +80,7 @@ export default function OriginalAiChatCard() {
   const [provider, setProvider] = useState<'gemini' | 'ollama'>('gemini');
 
   // Ollama Configuration State
-  const [ollamaUrl, setOllamaUrl] = useState<string>('http://127.0.0.1:11434');
+  const [ollamaUrl, setOllamaUrl] = useState<string>('');
   const [ollamaModel, setOllamaModel] = useState<string>('llama2-uncensored:7b');
   const [showOllamaConfig, setShowOllamaConfig] = useState<boolean>(false);
   const [ollamaStatus, setOllamaStatus] = useState<{ online?: boolean; error?: string; url?: string; model?: string; modelInstalled?: boolean; models?: (string | { name: string })[] } | null>(null);
@@ -394,21 +394,21 @@ export default function OriginalAiChatCard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
                 <label className="text-[11px] font-mono text-neutral-400 block mb-1">
-                  Adres URL serwera Ollama (OLLAMA_BASE_URL)
+                  Adres backendu Ollama (z serwera, po teście)
                 </label>
                 <input
                   type="text"
                   value={ollamaUrl}
                   readOnly
                   title="Adres jest konfigurowany po stronie serwera (OLLAMA_BASE_URL), nie w przeglądarce"
-                  placeholder="Konfiguracja serwera: OLLAMA_BASE_URL"
+                  placeholder="Brak odczytu konfiguracji serwera"
                   className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-700 rounded-lg text-neutral-200 font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div>
                 <label className="text-[11px] font-mono text-neutral-400 block mb-1">
-                  Model Ollama (np. llama2-uncensored:7b, gemma4, llama3:8b)
+                  Model skonfigurowany na serwerze (np. llama2-uncensored:7b)
                 </label>
                 <input
                   type="text"
