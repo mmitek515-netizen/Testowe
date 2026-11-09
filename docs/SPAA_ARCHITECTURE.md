@@ -44,3 +44,49 @@ curl -fsS http://127.0.0.1:3000/api/spaa/sphere
 ```
 
 Zielone testy repozytorium nie dowodzą, że usługi uruchomiono na docelowym Codespace czy że model faktycznie odpowiedział; do tego potrzebna jest weryfikacja środowiska.
+
+
+## Pełna siatka komunikacji 4×4 (każdy z każdym)
+
+Wszystkie cztery lokalne procesy wykonawcze używają **tej samej bazy SQLite
+i tej samej generacji sfery**. Połączenia logiczne są kierunkowe: czterech
+workerów × trzech pozostałych = **12 tras**. Żadne osobne transporty między
+agentami nie są niezbędne.
+
+1. Każde zadanie otrzymuje identyfikator bieżącej sfery (\`sphereId\`).
+2. Po ukończeniu zadania worker zapisuje pojedynczą wiadomość statusową dla
+   każdego z pozostałych trzech workerów (\`mesh_messages\`). Nie przekazuje
+   pełnej, potencjalnie wrażliwej odpowiedzi.
+3. Każdy worker asynchronicznie odbiera wiadomości, zapisuje potwierdzenia
+   (\`deliveredAt\`) i ma ostatnie komunikaty dostępne przy następnym zadaniu.
+4. Odbiór nie uruchamia automatycznie kolejnego modelu ani zadania, co
+   zapobiega nieograniczonym pętlom wymiany wiadomości.
+5. Każda wiadomość zachowuje \`sender\`, \`recipient\`, \`sphereId\`,
+   \`kind\`, \`state\` i czas utworzenia/dostarczenia.
+
+Autoryzowany kanał wewnętrzny:
+
+- \`GET /mesh\` — członkowie, wszystkie 12 tras, dostępność i zaległości
+- \`GET /mesh/messages\` — metadane ostatnich wiadomości (bez pełnej treści)
+- \`POST /mesh/send\` — notatka operatora do wybranego workera lub \`*\`;
+  serwer zapisuje prawdziwego nadawcę jako \`operator\`, nie pozwala podszyć
+  się pod agenta
+
+Przykład wiadomości (tylko wewnętrzne API za tokenem):
+
+\`\`\`json
+{"recipient":"*","body":"Zbierzcie raport ze wspólnej sfery"}
+\`\`\`
+
+Backend SVL wystawia **tylko podgląd** \`GET /api/spaa/mesh\`, bez sekretu
+i bez otwartego zapisu. Interaktywny panel pozwala wybrać workera i obejrzeć
+jego trzy dwukierunkowe połączenia. \`available=true\` oznacza aktywne
+heartbeat obu lokalnych workerów, nie tożsamość oryginalnych agentów.
+
+Testy \`integrations/agent-rest/tests/test_spaa_runtime.py\` sprawdzają
+12 kierunków, dostarczenie do pozostałych workerów, wspólne \`sphereId\`,
+potwierdzenia, uwierzytelnienie i brak automatycznych kaskad.
+
+**Zakres:** pełna siatka obejmuje 4 lokalne workery tego demona.
+Pozostałe komponenty systemu, host lub sieci zewnętrzne są obserwowane
+tylko przez zarejestrowane konektory i zgodnie z uprawnieniami.
