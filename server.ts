@@ -115,7 +115,7 @@ async function localWorkerHealth() {
 }
 
 /** Only the local SPAA daemon owns execution workers and authoritative sphere. */
-async function readCentralSPAA<T = unknown>(route: '/sphere' | '/sphere/workers'): Promise<T> {
+async function readCentralSPAA<T = unknown>(route: '/sphere' | '/sphere/workers' | '/mesh'): Promise<T> {
   if (!AGENT_API_URL || AGENT_API_TOKEN.length < 32) {
     throw new Error('spaa_not_configured');
   }
