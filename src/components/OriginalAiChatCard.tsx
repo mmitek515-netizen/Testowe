@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MashyValue } from './MashyCode';
 import { decodeMashy } from '../core/mashyCode';
-import { Sparkles, Send, Shield, Zap, Music, Users, MessageSquare, Bot, User, RefreshCw, Cpu, Server, CheckCircle2, XCircle, Settings, ChevronDown, ExternalLink } from 'lucide-react';
+import { Sparkles, Send, Shield, Zap, Music, Users, MessageSquare, Bot, User, RefreshCw, Cpu, Server, CheckCircle2, XCircle, Settings, ChevronDown, ExternalLink, ImagePlus, X } from 'lucide-react';
 
 export interface ChatMessage {
   id: string;
@@ -89,6 +89,45 @@ export default function OriginalAiChatCard() {
   const [isCheckingOllama, setIsCheckingOllama] = useState<boolean>(false);
 
   const [inputMessage, setInputMessage] = useState('');
+  const [visionImage, setVisionImage] = useState<{
+    name: string; mime_type: 'image/png' | 'image/jpeg'; base64: string
+  } | null>(null);
+  const [visionImageError, setVisionImageError] = useState('');
+  const [visionBusy, setVisionBusy] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const loadVisionImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setVisionImageError('');
+    if (!['image/png', 'image/jpeg'].includes(file.type) || !file.size || file.size > 2 * 1024 * 1024) {
+      setVisionImageError('Wybierz obraz PNG/JPEG o maksymalnym rozmiarze 2 MB.');
+      return;
+    }
+    setVisionBusy(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Nie można odczytać obrazu.'));
+        reader.readAsDataURL(file);
+      });
+      const index = dataUrl.indexOf(',');
+      if (index < 0) throw new Error('Nieprawidłowe dane obrazu.');
+      setVisionImage({
+        name: file.name,
+        mime_type: file.type as 'image/png' | 'image/jpeg',
+        base64: dataUrl.slice(index + 1),
+      });
+      setProvider('ollama');
+      setMode('single');
+    } catch (error) {
+      setVisionImageError(error instanceof Error ? error.message : 'Błąd obrazu.');
+    } finally {
+      setVisionBusy(false);
+    }
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -147,13 +186,19 @@ export default function OriginalAiChatCard() {
 
   const handleSendMessage = async (customText?: string) => {
     const textToSend = decodeMashy(customText || inputMessage);
-    if (!textToSend.trim() || isLoading) return;
+    const selectedImage = visionImage;
+    if ((!textToSend.trim() && !selectedImage) || isLoading || visionBusy) return;
+    if (selectedImage && (mode !== 'single' || provider !== 'ollama')) {
+      setVisionImageError('Analiza obrazów jest dostępna przez Ollama w trybie pojedynczego czatu.');
+      return;
+    }
+    const textPrompt = textToSend.trim() || 'Opisz szczegółowo załączony obraz.';
 
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
       sender: 'user',
       senderName: 'Operator',
-      text: textToSend.trim(),
+      text: selectedImage ? textPrompt + ' [Obraz: ' + selectedImage.name + ']' : textPrompt,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
@@ -163,12 +208,16 @@ export default function OriginalAiChatCard() {
 
     try {
       if (mode === 'single') {
-        const response = await fetch('/api/chat', {
+        const response = await fetch(selectedImage ? '/api/ollama/vision' : '/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: JSON.stringify(selectedImage ? {
             personaId: selectedPersona,
-            message: textToSend,
+            message: textPrompt,
+            image: { mime_type: selectedImage.mime_type, base64: selectedImage.base64 },
+          } : {
+            personaId: selectedPersona,
+            message: textPrompt,
             provider,
             ollamaUrl,
             ollamaModel,
@@ -203,6 +252,7 @@ export default function OriginalAiChatCard() {
         };
 
         setMessages((prev) => [...prev, aiMsg]);
+        if (selectedImage) setVisionImage(null);
       } else {
         // Roundtable mode
         const response = await fetch('/api/roundtable', {
@@ -596,8 +646,17 @@ export default function OriginalAiChatCard() {
         </div>
       )}
 
-      {/* Input Form */}
+      {/* Input Form: real Vision image attachment, kept client-side until submission */}
       <div className="p-4 border-t border-neutral-800 bg-neutral-950/90">
+        {visionImage && (
+          <div className="mb-3 flex items-center justify-between rounded-lg border border-amber-700/40 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
+            <span>Obraz do analizy: <MashyValue value={visionImage.name} size={11} /></span>
+            <button type="button" aria-label="Usuń załączony obraz" onClick={() => setVisionImage(null)}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        {visionImageError && <p role="alert" className="mb-2 text-xs text-rose-300">{visionImageError}</p>}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -605,6 +664,14 @@ export default function OriginalAiChatCard() {
           }}
           className="flex items-center gap-2"
         >
+          <input ref={imageInputRef} type="file" accept="image/png,image/jpeg" className="hidden"
+            onChange={(event) => { void loadVisionImage(event); }} aria-label="Wybierz obraz do analizy Llama Vision" />
+          <button type="button" disabled={isLoading || visionBusy}
+            onClick={() => imageInputRef.current?.click()}
+            title="Dodaj obraz PNG/JPEG do analizy przez Llama 3.2 Vision"
+            className="p-2.5 rounded-xl border border-neutral-700 bg-neutral-900 text-amber-300 hover:border-amber-500 disabled:opacity-40">
+            <ImagePlus className="w-4 h-4" />
+          </button>
           <input
             type="text"
             placeholder={
@@ -619,9 +686,9 @@ export default function OriginalAiChatCard() {
           />
           <button
             type="submit"
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={(!inputMessage.trim() && !visionImage) || isLoading || visionBusy}
             className={`p-2.5 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-              inputMessage.trim() && !isLoading
+              (inputMessage.trim() || visionImage) && !isLoading && !visionBusy
                 ? 'bg-gradient-to-r from-purple-600 via-amber-600 to-cyan-600 text-white shadow-lg shadow-purple-500/20 hover:scale-105'
                 : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
             }`}
