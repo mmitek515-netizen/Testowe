@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotent Debian 13 bootstrap for SVL Kernel, Ollama 8B and local worker.
+# Idempotent Debian 13 bootstrap for SVL Kernel, Ollama 7B and local worker.
 # This starts a local worker, NOT a verified original external agent.
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
@@ -30,9 +30,9 @@ fi
 unset token
 
 model="$(grep -E '^OLLAMA_MODEL=' .env | tail -n 1 | cut -d '=' -f 2- | tr -d '\r')"
-model="${model:-Thox-ai/thoxopen-8b-heretic:q4_k_m}"
+model="${model:-llama2-uncensored:7b}"
 
-echo "Starting private Ollama 8B + SVL control backend + local SQLite worker..."
+echo "Starting private Ollama 7B + SVL control backend + local SQLite worker..."
 docker compose --profile agents up -d --build
 
 echo "Downloading/verifying model: $model"
