@@ -12,6 +12,25 @@ if [[ ! -f .env ]]; then
 fi
 chmod 600 .env
 
+# An explicit model argument can replace an older 8B selection in an existing .env.
+# Example: bash scripts/start-debian13-ollama-agents.sh llama2-uncensored:7b
+if (( $# > 1 )); then
+  echo "Usage: $0 [ollama-model-tag]" >&2
+  exit 2
+fi
+if [[ -n "${1:-}" ]]; then
+  requested_model="$1"
+  if [[ ! "$requested_model" =~ ^[A-Za-z0-9._/-]+:[A-Za-z0-9._-]+$ ]]; then
+    echo "Invalid Ollama model tag: $requested_model" >&2
+    exit 2
+  fi
+  if grep -q '^OLLAMA_MODEL=' .env; then
+    sed -i "s|^OLLAMA_MODEL=.*|OLLAMA_MODEL=${requested_model}|" .env
+  else
+    printf 'OLLAMA_MODEL=%s\n' "$requested_model" >> .env
+  fi
+fi
+
 if ! grep -Eq '^AGENT_API_TOKEN=[a-fA-F0-9]{64}$' .env; then
   if command -v openssl >/dev/null 2>&1; then
     token="$(openssl rand -hex 32)"
