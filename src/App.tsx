@@ -11,6 +11,7 @@ import PythonSandboxCard from './components/PythonSandboxCard';
 import ForensicAnalysisModal from './components/ForensicAnalysisModal';
 import OriginalAiChatCard from './components/OriginalAiChatCard';
 import MissionControl from './components/MissionControl';
+import Debian13StatusCard from './components/Debian13StatusCard';
 
 export default function App() {
   // Instantiate SVL System Kernel once
@@ -63,6 +64,7 @@ export default function App() {
         
         {/* Security Warning Banner for the GitHub Repository */}
         <RepoAuditBanner />
+        <Debian13StatusCard />
 
         {/* Tab 1: Dashboard (Centrum Operacyjne) */}
         {activeTab === 'dashboard' && (

@@ -22,7 +22,7 @@ if ! getent passwd debian13 >/dev/null 2>&1; then
 fi
 
 install -d -o root -g root -m 0755 /usr/local/lib/debian13/system
-for module in server.py work_store.py original_agents.py alex_bridge.py alex_handoff.py; do
+for module in server.py work_store.py original_agents.py alex_bridge.py alex_handoff.py mcp_server.py readiness.py; do
   install -o root -g root -m 0644 "$SOURCE_DIR/$module" "/usr/local/lib/debian13/system/$module"
 done
 install -d -o debian13 -g debian13 -m 0750 /var/lib/debian13/workspace
