@@ -13,6 +13,7 @@ import OriginalAiChatCard from './components/OriginalAiChatCard';
 import MissionControl from './components/MissionControl';
 import Debian13StatusCard from './components/Debian13StatusCard';
 import SPAAStatusCard from './components/SPAAStatusCard';
+import LinuxDaemonSphereCard from './components/LinuxDaemonSphereCard';
 import MashyCodePanel from './components/MashyCodePanel';
 
 export default function App() {
@@ -69,6 +70,7 @@ export default function App() {
         <MashyCodePanel />
         <Debian13StatusCard />
         <SPAAStatusCard />
+        <LinuxDaemonSphereCard />
 
         {/* Tab 1: Dashboard (Centrum Operacyjne) */}
         {activeTab === 'dashboard' && (
