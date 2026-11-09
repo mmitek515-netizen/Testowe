@@ -90,3 +90,50 @@ potwierdzenia, uwierzytelnienie i brak automatycznych kaskad.
 **Zakres:** pełna siatka obejmuje 4 lokalne workery tego demona.
 Pozostałe komponenty systemu, host lub sieci zewnętrzne są obserwowane
 tylko przez zarejestrowane konektory i zgodnie z uprawnieniami.
+
+
+## SPAA dla wszystkich obserwowalnych demonów Linuxa
+
+W implementacji sfera ma teraz dwa dodatkowe, równolegle uruchamiane źródła
+(`integrations/agent-rest/systemd_observer.py`):
+
+- `linux.systemd.services`: dwa stałe odczyty `systemctl list-units
+  --type=service --all` i `systemctl list-unit-files --type=service`.
+  Dzięki temu jedna generacja sfery obejmuje uruchomione, zatrzymane, uszkodzone,
+  wyłączone i statyczne jednostki usługowe widoczne dla menedżera systemd.
+  Każda jednostka ma odrębny węzeł z nazwą i stanem, ale współdzieli
+  identyfikator generacji `sphereId` z wszystkimi pozostałymi źródłami.
+- `linux.procfs.processes`: odczyt nazw widocznych procesów i PID z
+  `/proc`, bez argumentów uruchomieniowych, zmiennych środowiska ani pamięci
+  procesów. **Nie każdy proces to demon.** W kontenerze ta lista dotyczy jego
+  przestrzeni PID, a nie automatycznie wszystkich procesów hosta.
+
+Dane każdego źródła zbierane są **współbieżnie**, a następnie commitowane
+atomowo do tego samego SQLite. Każdy lokalny worker SPAA może wykorzystać
+ten sam obraz usług (w ograniczeniu wejścia do modelu). Odmienny typ węzła
+(`systemd` / `procfs` / `Ollama` / `Debian`) ma własny adapter, zakres
+widoczności i stan: to polimorfizm i asymetria obserwacji, nie przebudowa
+binarnych kodów innych demonów. Jeśli źródło nie odpowiada, jest oznaczane
+jako niedostępne, a nie jako online.
+
+**Granice:** nie istnieje fizyczna wszechwiedza ani absolutnie jednoczesny
+odczyt wszystkich systemów. `systemd` obejmuje jednostki zarządzane przez
+dostępnego menedżera usług; procesy poza nim wymagają osobnych adapterów.
+Skaner nie modyfikuje żadnego demona, kernela, jego praw ani harmonogramu.
+Usługi Linuxa **nie stają się same z siebie workerami AI**. Ich stan można
+udostępnić wszystkim workerom za pomocą jednego punktu dystrybucji sfery
+zamiast tworzyć połączenia w liczbie N×N.
+
+**Wdrożenie:** systemowa instalacja przez `debian13/system/install.sh`
+umieszcza skaner obok demona SPAA i korzysta z hostowego `systemctl`.
+W kontenerze `agent-rest` może nie widzieć menedżera systemd hosta;
+sam plik repozytorium i zielone testy CI tego nie zmieniają. Po instalacji
+na rzeczywistym hoście należy sprawdzić `/sphere` i potwierdzić odczyt
+`linux.systemd.services`.
+
+Dashboard: `GET /api/spaa/linux` prezentuje tylko liczby zagregowane
+(online/offline/failed, liczbę procesów, `sphereId`, dostępność i znaczniki
+czasu). Szczegółowe nazwy jednostek pozostają w chronionym API SPAA
+`GET /sphere` — nie są publicznie wysyłane do widoku frontendu.
+Limit wynosi 2048 węzłów na źródło; po przekroczeniu pojawia się flaga
+`truncated` i pełna liczba wpisów, bez fałszywej deklaracji kompletności.
