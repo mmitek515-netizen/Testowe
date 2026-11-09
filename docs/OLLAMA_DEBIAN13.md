@@ -1,10 +1,10 @@
-# Ollama 8B + SVL Kernel — Debian 13 Trixie
+# Ollama 7B + SVL Kernel — Debian 13 Trixie
 
 ## Architektura
 
-`docker-compose.yml` uruchamia trzy usługi:
+`docker-compose.yml` uruchamia trzy podstawowe usługi oraz opcjonalnego workera `agent-rest` (profil `agents`):
 - `ollama` — właściwy serwer inferencji, dostępny **wyłącznie w prywatnej sieci Docker**, bez publicznego portu 11434;
-- `ollama-pull` — pobiera model `Thox-ai/thoxopen-8b-heretic:q4_k_m` do trwałego woluminu `ollama_models`;
+- `ollama-pull` — pobiera model `llama2-uncensored:7b` do trwałego woluminu `ollama_models`;
 - `ai-linux-control` — backend Express + GUI Vite, rozmawia z Ollamą przez wewnętrzny adres `http://ollama:11434`.
 
 Baza docelowa: **Debian 13 host**, na którym zainstalowane są Docker Engine i aktualny plugin Docker Compose v2. To kontenery aplikacji; sam stack **nie jest jeszcze bootowalną dystrybucją Debian 13**.
@@ -16,11 +16,12 @@ git clone https://github.com/mmitek515-netizen/Testowe.git
 cd Testowe
 cp .env.example .env
 # Skonfiguruj tylko potrzebne klucze Gemini (opcjonalnie), lokalnie, poza repozytorium.
-docker compose up -d --build
+bash scripts/start-debian13-ollama-agents.sh llama2-uncensored:7b
+# Opcjonalnie: obserwuj pobieranie modelu
 docker compose logs -f ollama-pull
 ```
 
-Na pierwszy start trzeba pobrać ~5.0 GB modelu. Wymagane jest dodatkowe miejsce na obrazy Dockera; 8–12 GB RAM jest rozsądnym punktem wyjścia dla tego modelu, szczególnie przy jednoczesnym backendzie i innych procesach.
+Na pierwszy start trzeba pobrać ~3,8 GB modelu. Wymagane jest dodatkowe miejsce na obrazy Dockera; co najmniej 8 GB RAM zaleca dokumentacja Ollama dla tego modelu, szczególnie przy jednoczesnym backendzie i innych procesach.
 
 ## Kontrola rzeczywistego działania
 
@@ -33,7 +34,7 @@ curl -fsS -X POST http://127.0.0.1:3000/api/chat \
   -d '{"personaId":"alex","message":"Odpowiedz krótko: czy model działa?","provider":"ollama"}'
 ```
 
-Odpowiedź statusowa powinna podać `online: true`, `model: Thox-ai/thoxopen-8b-heretic:q4_k_m`, `modelInstalled: true`. Jeśli `modelInstalled: false`, obserwuj logi usługi `ollama-pull` albo wykonaj `docker compose exec -T ollama ollama pull Thox-ai/thoxopen-8b-heretic:q4_k_m`.
+Odpowiedź statusowa powinna podać `online: true`, `model: llama2-uncensored:7b`, `modelInstalled: true`. Jeśli `modelInstalled: false`, obserwuj logi usługi `ollama-pull` albo wykonaj `docker compose exec -T ollama ollama pull llama2-uncensored:7b`.
 
 Stan czatu pokazuje działanie **persony poprzez model Ollama**, ale nie dowodzi podłączenia oryginalnego, autonomicznego agenta. Misje AI nadal wymagają osobnego wykonawcy zadań.
 
@@ -43,9 +44,11 @@ Hosted Preview Google AI Studio **nie uruchamia automatycznie** kontenerów Dock
 
 Adres i model w panelu Ollamy to **wartości pochodzące z backendu**, a nie zmiany wykonywane przez przeglądarkę.
 
+**Uwaga:** istniejący plik `.env` może nadal wskazywać wcześniejszy model 8B. Podanie `llama2-uncensored:7b` jako argumentu skryptu aktualizuje `OLLAMA_MODEL` w `.env`. Stary model pozostaje na dysku do ręcznego usunięcia. Aby powrócić do 8B, podaj jego pełny tag jako argument.
+
 ## Rozwiązywanie problemów
 
 - `online:false` / 503: usługa Ollama nieosiągalna z backendu, sprawdź `docker compose ps` i `docker compose logs ollama`.
 - `modelInstalled:false`: trwa pobieranie lub model nie został pobrany; sprawdź `docker compose logs ollama-pull`.
-- `Unexpected token '<'`: HTTP endpoint zwrócił stronę HTML zamiast JSON; sprawdź port aplikacji i endpoint API. Nie parsuj błędnej odpowiedzi jako JSON.
+- `HTTP 200 <!doctype html>`: żądanie `/api/ollama/status` trafiło do serwera strony (SPA) zamiast endpointu Express. Uruchom aplikację przez backend `npm run dev`/Docker, a nie samą komendą `vite`, sprawdź reverse proxy i tablicę tras `/api/*`. Otrzymanie HTML nie oznacza, że model jest zainstalowany lub że działa. Nie parsuj HTML jako JSON.
 - Stan przydzielonych misji pozostaje `planned` do czasu podłączenia rzeczywistych executorów. 
