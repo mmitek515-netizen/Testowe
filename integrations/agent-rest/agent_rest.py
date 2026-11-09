@@ -233,7 +233,9 @@ def list_workers():
             last = datetime.fromisoformat(row["lastSeen"]).timestamp()
         except (TypeError, ValueError):
             last = 0
-        alive = current - last < max(45, REFRESH_SECONDS * 3)
+        # A registered profile is not a running worker until its loop heartbeats.
+        alive = (row["state"] != "starting" and
+                 current - last < max(45, REFRESH_SECONDS * 3))
         workers.append({
             "name": row["name"], "capabilities": list(AGENTS[row["name"]]),
             "state": row["state"] if alive else "stale",
