@@ -52,5 +52,7 @@ curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/ollama/statu
 printf '\n'
 curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/agents/status"
 printf '\n'
+curl --silent --show-error --fail "http://127.0.0.1:${app_port}/api/local-worker/status"
+printf '\n'
 echo "SVL Kernel: http://127.0.0.1:${app_port}"
 echo "Note: local task worker processes Ollama tasks but is not verified as any original Aria/Alex/Astyria/Aurelius agent."
