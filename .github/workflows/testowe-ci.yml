@@ -26,6 +26,8 @@ jobs:
         run: python3 -m compileall -q debian13/system
       - name: Unit and HTTP integration tests
         run: python3 -m unittest discover -s debian13/system/tests -v
+      - name: SPAA daemon SQLite / multi-source / HTTP tests
+        run: python3 -m unittest discover -s integrations/agent-rest/tests -v
       - name: Check shell syntax
         run: |
           bash -n scripts/start-debian13-ollama-agents.sh

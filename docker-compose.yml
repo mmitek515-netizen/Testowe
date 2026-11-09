@@ -26,8 +26,8 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["ollama pull ${OLLAMA_MODEL:-llama2-uncensored:7b}"]
 
-  # Optional local, persistent Ollama task worker imported from AI System Linux.
-  # It is NOT authenticated as any of the four original external agents.
+  # SPAA spherical/polymorphic/asymmetric/asynchronous local daemon.
+  # Its four routing labels are NOT verified original external AI agents.
   agent-rest:
     profiles: ["agents"]
     image: python:3.12-alpine
@@ -43,6 +43,10 @@ services:
       AGENT_API_PORT: "8091"
       AGENT_DB_PATH: /data/agent_tasks.sqlite3
       OLLAMA_BASE_URL: http://ollama:11434
+      DEBIAN13_SYSTEM_API_URL: http://debian13-system:8080
+      DEBIAN13_API_TOKEN: ${DEBIAN13_API_TOKEN:-}
+      SPAA_BACKEND_URL: http://ai-linux-control:3000
+      SPAA_REFRESH_SECONDS: ${SPAA_REFRESH_SECONDS:-15}
     volumes:
       - ./integrations/agent-rest:/app/integrations/agent-rest:ro
       - agent_tasks_data:/data
