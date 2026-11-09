@@ -1,0 +1,53 @@
+name: Testowe — Debian 13 API + SVL GUI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testowe-main-validation
+  cancel-in-progress: true
+
+jobs:
+  debian13:
+    name: Debian 13 Python / API
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile imported Debian 13 API
+        run: python3 -m compileall -q debian13/system
+      - name: Unit and HTTP integration tests
+        run: python3 -m unittest discover -s debian13/system/tests -v
+      - name: Check shell syntax
+        run: |
+          bash -n scripts/start-debian13-ollama-agents.sh
+          bash -n scripts/run-codespace-missions.sh
+          bash -n scripts/verify-debian13-runtime.sh
+      - name: Compose syntax without starting services
+        env:
+          DEBIAN13_API_TOKEN: ci-placeholder-token-at-least-32-characters-long
+        run: docker compose --profile agents --profile debian13 config --quiet
+
+  svl:
+    name: React / Express build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install packages
+        run: npm install --no-audit --no-fund
+      - name: TypeScript validation
+        run: npm run lint
+      - name: Build SVL
+        run: npm run build
