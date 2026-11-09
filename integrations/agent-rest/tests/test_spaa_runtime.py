@@ -100,6 +100,71 @@ class SphereRuntimeTests(unittest.TestCase):
             web.server_close()
             thread.join(timeout=3)
 
+    def test_all_to_all_mesh_reuses_one_sphere_and_records_receipts(self):
+        sphere = spaa.collect_sphere({"system": lambda: {"ready": True}})
+        topology = spaa.mesh_topology()
+        self.assertEqual(topology["sphereId"], sphere["sphereId"])
+        self.assertEqual(len(topology["members"]), 4)
+        self.assertEqual(len(topology["edges"]), 12)
+        self.assertEqual(len({(e["from"], e["to"]) for e in topology["edges"]}), 12)
+        sent = spaa.publish_mesh_message("Alex", "Task completed", sphere_id=sphere["sphereId"])
+        self.assertEqual(set(sent["recipients"]), {"Aria", "Astyria", "Aurelius"})
+        self.assertEqual(sent["queued"], 3)
+        for peer in sent["recipients"]:
+            self.assertIn("Task completed", [m["body"] for m in spaa.drain_inbox(peer)])
+            self.assertEqual(spaa.drain_inbox(peer), [])
+            self.assertEqual(spaa.peer_context(peer)[-1]["sphereId"], sphere["sphereId"])
+        self.assertEqual(spaa.mesh_topology()["messagesStored"], 3)
+        self.assertTrue(all(m["state"] == "delivered" for m in spaa.recent_mesh_messages()))
+
+    def test_mesh_does_not_permit_spoofing_or_infinite_echo(self):
+        with self.assertRaises(ValueError):
+            spaa.publish_mesh_message("unknown-executor", "Spoof")
+        with self.assertRaises(ValueError):
+            spaa.publish_mesh_message("Aria", "self", recipient="Aria")
+        with self.assertRaises(ValueError):
+            spaa.publish_mesh_message("Alex", "X" * 1025)
+        event = spaa.publish_mesh_message("Aria", "Peer status")
+        self.assertEqual(event["queued"], 3)
+        for name in event["recipients"]:
+            spaa.drain_inbox(name)
+        # Receiving a message is not equivalent to executing a model or replying.
+        self.assertEqual(spaa.mesh_topology()["messagesStored"], 3)
+
+    def test_operator_mesh_api_is_authenticated_and_fans_out(self):
+        web = ThreadingHTTPServer(("127.0.0.1", 0), spaa.Handler)
+        thread = threading.Thread(target=web.serve_forever, daemon=True)
+        thread.start()
+        def send(method, path, body=None, authorized=True):
+            connection = http.client.HTTPConnection("127.0.0.1", web.server_port, timeout=5)
+            headers = {"Content-Type": "application/json"}
+            if authorized:
+                headers["Authorization"] = "Bearer " + spaa.TOKEN
+            try:
+                connection.request(method, path,
+                                   json.dumps(body) if body is not None else None,
+                                   headers=headers)
+                reply = connection.getresponse()
+                return reply.status, json.loads(reply.read())
+            finally:
+                connection.close()
+        try:
+            spaa.collect_sphere({"system": lambda: {"ready": True}})
+            self.assertEqual(send("GET", "/mesh", authorized=False)[0], 401)
+            status, topology = send("GET", "/mesh")
+            self.assertEqual(status, 200)
+            self.assertEqual(topology["directedLinks"], 12)
+            status, output = send("POST", "/mesh/send", {
+                "sender": "Alex", "recipient": "*", "body": "Everyone synchronize"})
+            self.assertEqual(status, 202)
+            self.assertEqual(output["sender"], "operator")
+            self.assertEqual(output["queued"], 4)
+            self.assertEqual(len(spaa.recent_mesh_messages()), 4)
+        finally:
+            web.shutdown()
+            web.server_close()
+            thread.join(timeout=4)
+
     def test_schema_migration_and_recovery(self):
         with spaa.db_session() as db:
             db.execute("INSERT INTO tasks(id,agent,description,status,createdAt,kind) "
