@@ -36,7 +36,9 @@ jobs:
       - name: Compose syntax without starting services
         env:
           DEBIAN13_API_TOKEN: ci-placeholder-token-at-least-32-characters-long
-        run: docker compose --profile agents --profile debian13 config --quiet
+        run: |
+          docker compose --profile agents --profile debian13 config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.host-spaa.yml --profile agents --profile debian13 config --quiet
 
   svl:
     name: React / Express build
