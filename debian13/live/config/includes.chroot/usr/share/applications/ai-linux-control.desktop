@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AI Linux — Control Center
+Name[pl]=AI Linux — Centrum sterowania
+Comment=Open locally running AI Linux dashboard
+Comment[pl]=Otwórz lokalny panel AI Linux
+Exec=ai-linux-control
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+StartupNotify=false
