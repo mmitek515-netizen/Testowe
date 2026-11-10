@@ -31,10 +31,19 @@ jobs:
       - name: Build React/Vite frontend
         run: npm run build
 
+      - name: Verify Cloudflare API token is configured
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Missing CLOUDFLARE_API_TOKEN repository secret. Create a token with Cloudflare Pages Edit permission and save it in GitHub Actions secrets."
+            exit 1
+          fi
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: 8b4fc8cc0b4ff64c37b130683d86face
           command: pages deploy dist --project-name=ai-linux-testowe --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
