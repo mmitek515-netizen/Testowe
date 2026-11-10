@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Explicit on-demand installation and startup for a real Debian 13 system.
+# Never automatically starts privileged services on boot of the Live ISO.
+set -Eeuo pipefail
+[[ "$(id -u)" == 0 ]] || { echo "Use sudo ai-linux-start" >&2; exit 1; }
+root=/opt/ai-linux
+[[ -f "$root/docker-compose.yml" && -f "$root/debian13/system/install.sh" ]] || {
+  echo "AI Linux source snapshot not installed in /opt/ai-linux" >&2
+  exit 1
+}
+command -v systemctl >/dev/null || { echo "systemd unavailable" >&2; exit 1; }
+command -v docker >/dev/null || { echo "docker unavailable" >&2; exit 1; }
+command -v python3 >/dev/null || { echo "python3 unavailable" >&2; exit 1; }
+docker compose version >/dev/null || { echo "Docker Compose v2 unavailable" >&2; exit 1; }
+
+systemctl start docker.service
+# Install host observer and loopback-only Debian and SPAA services.
+sh "$root/debian13/system/install.sh"
+[[ -s /var/lib/debian13/observations/host-sphere.json ]] || {
+  echo "Host collector has not produced a snapshot; inspect testowe-host-observer.service" >&2
+  exit 1
+}
+cd "$root"
+export SPAA_HOST_SPHERE=1
+exec bash scripts/start-debian13-ollama-agents.sh "${1:-llama3.2-vision:11b}"
