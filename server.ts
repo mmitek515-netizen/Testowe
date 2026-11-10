@@ -6,6 +6,7 @@ import { validateVisionImagePayload } from './src/core/visionImage';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
+import { registerHostTerminal } from './src/server/hostTerminal';
 
 dotenv.config();
 
@@ -14,6 +15,9 @@ const APP_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 // Vision: up to 2 MiB original PNG/JPEG becomes ~2.8 MiB base64 JSON.
 app.use(express.json({ limit: '4mb' }));
+
+// Authenticated, disabled-by-default system terminal (not an emulated console).
+registerHostTerminal(app);
 
 const PORT = process.env.PORT || 3000;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
