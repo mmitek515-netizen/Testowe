@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from 'express';
 import { spawn } from 'node:child_process';
 import { timingSafeEqual } from 'node:crypto';
+import { createConnection } from 'node:net';
 
 /**
  * Actual host-process command execution. Disabled by default.
@@ -13,6 +14,44 @@ import { timingSafeEqual } from 'node:crypto';
  *
  * Never expose this operation without authentication.
  */
+type HostReply = Record<string, unknown>;
+const rootSocketPath = process.env.HOST_CLI_SOCKET || '';
+
+async function queryRootSocket(operation: 'status' | 'run', command?: string): Promise<HostReply> {
+  if (!rootSocketPath) throw new Error('host_socket_unconfigured');
+  return new Promise((resolve, reject) => {
+    const socket = createConnection({ path: rootSocketPath });
+    let buffer = '';
+    let done = false;
+    const finish = (error?: Error, payload?: HostReply) => {
+      if (done) return;
+      done = true;
+      socket.destroy();
+      if (error) reject(error);
+      else resolve(payload || {});
+    };
+    socket.setTimeout(25000, () => finish(new Error('host_socket_timeout')));
+    socket.on('connect', () => socket.write(JSON.stringify({ operation, command }) + '\\n'));
+    socket.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString('utf8');
+      if (buffer.length > 150000) return finish(new Error('host_response_too_large'));
+      const index = buffer.indexOf('\\n');
+      if (index >= 0) {
+        try {
+          const data = JSON.parse(buffer.slice(0, index)) as HostReply;
+          if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('bad_host_response');
+          if (typeof data.error === 'string') throw new Error(data.error);
+          finish(undefined, data);
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error('invalid_host_reply'));
+        }
+      }
+    });
+    socket.on('error', (error) => finish(error));
+    socket.on('close', () => { if (!done) finish(new Error('host_socket_closed')); });
+  });
+}
+
 export function registerHostTerminal(app: Express) {
   const configuredToken = process.env.HOST_CLI_TOKEN || '';
   const enabled = process.env.HOST_CLI_ENABLED === '1' && configuredToken.length >= 32;
@@ -42,9 +81,20 @@ export function registerHostTerminal(app: Express) {
     return true;
   }
 
-  app.get('/api/host-cli/status', (req, res) => {
+  app.get('/api/host-cli/status', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     if (!requireCli(req, res)) return;
+    if (rootSocketPath) {
+      try {
+        const status = await queryRootSocket('status');
+        if (status.isRoot !== true || status.uid !== 0 || status.scope !== 'linux-host-root') {
+          return res.status(503).json({ error: 'Usługa nie potwierdziła uprawnień root hosta.' });
+        }
+        return res.json({ enabled: true, ...status });
+      } catch {
+        return res.status(503).json({ error: 'Nie można połączyć się z usługą root hosta.' });
+      }
+    }
     const uid = process.getuid?.() ?? null;
     res.json({
       enabled: true,
@@ -57,13 +107,25 @@ export function registerHostTerminal(app: Express) {
     });
   });
 
-  app.post('/api/host-cli/run', (req, res) => {
+  app.post('/api/host-cli/run', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     if (!requireCli(req, res)) return;
     const command: unknown = req.body?.command;
     if (typeof command !== 'string' || !command.trim() ||
         command.length > maxCommandLength || command.includes('\0')) {
       return res.status(400).json({ error: 'Polecenie musi być tekstem (1–8192 znaków).' });
+    }
+
+    if (rootSocketPath) {
+      try {
+        const reply = await queryRootSocket('run', command);
+        if (reply.isRoot !== true || reply.uid !== 0 || reply.scope !== 'linux-host-root') {
+          return res.status(502).json({ error: 'Nieprawidłowa odpowiedź usługi host-root.' });
+        }
+        return res.json(reply);
+      } catch {
+        return res.status(503).json({ error: 'Nie udało się wykonać polecenia na hoście.' });
+      }
     }
 
     const started = Date.now();
@@ -111,7 +173,7 @@ export function registerHostTerminal(app: Express) {
       if (finished) return;
       finished = true;
       clearTimeout(timer);
-      res.status(500).json({ error: 'Nie udało się uruchomić powłoki bash.', code: error.code || 'spawn_error' });
+      res.status(500).json({ error: 'Nie udało się uruchomić powłoki bash.', code: (error as NodeJS.ErrnoException).code || 'spawn_error' });
     });
     child.on('close', (code, signal) => {
       if (finished) return;
