@@ -58,6 +58,37 @@ class HostSphereTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "stale_host_snapshot"):
                 collector.read_host_snapshot(dest, clock=stamp - timedelta(seconds=12))
 
+    def test_compact_context_preserves_every_sensor_and_version(self):
+        sphere = {
+            "state": "collected", "sphereId": "same-generation",
+            "observedAt": "2026-11-10T00:00:00+00:00", "sourceCount": 3,
+            "observations": [
+                {"source": "linux.systemd.services", "ok": True,
+                 "observedAt": "2026-11-10T00:00:00+00:00",
+                 "data": {"total": 2000, "counts": {"active": 1990, "failed": 10},
+                          "nodes": [{"name": "foo.service"}] * 2000}},
+                {"source": "linux.host.snapshot", "ok": True,
+                 "observedAt": "2026-11-10T00:00:00+00:00",
+                 "data": {
+                     "scope": "linux-host-collector", "snapshotId": "host-gen",
+                     "sources": {
+                         "systemd": {"ok": True, "data": {"total": 2000}},
+                         "procfs": {"ok": False, "error": "RuntimeError"}
+                     }
+                 }},
+                {"source": "ollama.models", "ok": False, "error": "TimeoutError"}
+            ],
+        }
+        brief = spaa.compact_sphere_context(sphere)
+        self.assertEqual(brief["sphereId"], "same-generation")
+        self.assertEqual(len(brief["observations"]), 3)
+        self.assertEqual(brief["observations"][0]["data"]["total"], 2000)
+        self.assertEqual(
+            brief["observations"][1]["data"]["sources"]["procfs"]["ok"], False
+        )
+        self.assertLess(len(json.dumps(brief)), 3000)
+        self.assertEqual(len(sphere["observations"][0]["data"]["nodes"]), 2000)
+
     def test_malformed_payload_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "host.json"
