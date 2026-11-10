@@ -50,6 +50,11 @@ done
 rm -rf -- "$WORK"
 mkdir -p "$WORK/config" "$WORK/config/includes.chroot/opt/ai-linux"
 cp -a "$LIVE_DIR/config/." "$WORK/config/"
+# GitHub contents API creates mode 0644 files; ensure desktop commands are
+# executable in the actual chroot and on the installed system.
+chmod 0755 "$WORK/config/includes.chroot/usr/local/bin/ai-linux-control" \
+  "$WORK/config/includes.chroot/usr/local/bin/ai-linux-start" \
+  "$WORK/config/includes.chroot/usr/local/bin/ai-linux-health"
 
 # Include a reproducible repository SOURCE SNAPSHOT (not models, tokens, or caches).
 # No automatic Docker, AI inference or privileged service is started at boot.
