@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Non-privileged diagnostics of local AI Linux deployment; never changes state.
+set -Eeuo pipefail
+echo "AI Linux — local service inspection"
+for service in docker.service debian13-system.service testowe-spaa.service testowe-host-observer.service; do
+  printf '%s: ' "$service"
+  systemctl is-active "$service" 2>/dev/null || true
+done
+for route in /api/health /api/spaa/status /api/spaa/linux /api/ollama/status; do
+  echo "== $route =="
+  curl -fsS --max-time 3 "http://127.0.0.1:3000$route" || echo "Not reachable"
+  echo
+done
