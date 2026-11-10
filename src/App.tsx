@@ -15,6 +15,7 @@ import Debian13StatusCard from './components/Debian13StatusCard';
 import SPAAStatusCard from './components/SPAAStatusCard';
 import LinuxDaemonSphereCard from './components/LinuxDaemonSphereCard';
 import MashyCodePanel from './components/MashyCodePanel';
+import HostTerminal from './components/HostTerminal';
 
 export default function App() {
   // Instantiate SVL System Kernel once
@@ -22,7 +23,7 @@ export default function App() {
 
   // Reactive state to trigger UI updates when kernel internal values change
   const [revision, setRevision] = useState(0);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit' | 'terminal' | 'hyperspace'>('dashboard');
   const [showAuditModal, setShowAuditModal] = useState(false);
 
   // Topological domain coordinates
@@ -51,7 +52,7 @@ export default function App() {
   }, [kernel, revision, domainBounds]);
 
   return (
-    <div className="min-h-screen bg-[#0a0d14] text-neutral-100 flex flex-col font-sans selection:bg-purple-500/30 selection:text-purple-200">
+    <div className="min-h-dvh bg-[#050b18] text-slate-100 flex flex-col font-sans selection:bg-cyan-400/30 selection:text-cyan-100">
       
       {/* Top Navbar */}
       <Navbar
@@ -63,7 +64,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="cyber-grid flex-1 min-w-0 w-full mx-auto px-3 sm:px-5 lg:px-7 py-5 space-y-6">
         
         {/* Security Warning Banner for the GitHub Repository */}
         <RepoAuditBanner />
@@ -71,6 +72,10 @@ export default function App() {
         <Debian13StatusCard />
         <SPAAStatusCard />
         <LinuxDaemonSphereCard />
+
+        {/* Terminale używają wspólnego uwierzytelnianego backendu CLI. */}
+        {activeTab === 'terminal' && <HostTerminal />}
+        {activeTab === 'hyperspace' && <HostTerminal hyperspace />}
 
         {/* Tab 1: Dashboard (Centrum Operacyjne) */}
         {activeTab === 'dashboard' && (
