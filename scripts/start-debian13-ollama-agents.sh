@@ -3,6 +3,16 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
 
+# Set SPAA_HOST_SPHERE=1 only after installing the native Debian 13 host collector.
+compose_args=(-f docker-compose.yml)
+if [[ "${SPAA_HOST_SPHERE:-0}" == "1" ]]; then
+  [[ -f docker-compose.host-spaa.yml ]] || { echo "Missing host SPAA overlay" >&2; exit 1; }
+  [[ -s /var/lib/debian13/observations/host-sphere.json ]] || {
+    echo "Host sphere not present. Run: sudo sh debian13/system/install.sh" >&2; exit 1;
+  }
+  compose_args+=(-f docker-compose.host-spaa.yml)
+fi
+
 command -v docker >/dev/null 2>&1 || { echo "Docker Engine is required" >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "Docker Compose v2 is required" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "Python 3 is required for secrets" >&2; exit 1; }
@@ -63,12 +73,12 @@ if [[ -z "$old_vision" || "$old_vision" == 'llama2-uncensored:7b' ]]; then
 fi
 
 echo "Stage 1: start private Ollama"
-docker compose up -d ollama
-docker compose exec -T ollama ollama pull "$model"
-docker compose exec -T ollama ollama show "$model"
+docker compose "${compose_args[@]}" up -d ollama
+docker compose "${compose_args[@]}" exec -T ollama ollama pull "$model"
+docker compose "${compose_args[@]}" exec -T ollama ollama show "$model"
 
 echo "Stage 2: start Debian 13, SVL and spherical SPAA worker service"
-docker compose --profile agents --profile debian13 up -d --build \
+docker compose "${compose_args[@]}" --profile agents --profile debian13 up -d --build \
   debian13-system agent-rest ai-linux-control
 
 app_port="$(read_env APP_PORT)"
