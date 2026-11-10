@@ -1,0 +1,19 @@
+# Debian 13 Trixie KDE Live desktop + on-demand local AI Linux runtime.
+# live-task-kde pulls Debian's supported KDE desktop task and live support.
+live-task-kde
+debian-installer-launcher
+live-config
+live-boot
+linux-image-amd64
+locales
+console-setup
+network-manager
+konsole
+firefox-esr
+sudo
+curl
+ca-certificates
+git
+python3
+docker.io
+docker-compose
