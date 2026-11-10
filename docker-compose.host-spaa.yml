@@ -1,0 +1,11 @@
+# Optional deployment overlay for a REAL Debian 13 host that has run
+# sudo sh debian13/system/install.sh.
+# Use: docker compose -f docker-compose.yml -f docker-compose.host-spaa.yml --profile agents up -d --build
+# The host collector writes a private local JSON file. The agent-rest container
+# receives a READ-ONLY mount; no host network, root control or Docker socket.
+services:
+  agent-rest:
+    environment:
+      SPAA_HOST_SNAPSHOT_FILE: /host-observations/host-sphere.json
+    volumes:
+      - /var/lib/debian13/observations:/host-observations:ro
