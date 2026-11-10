@@ -1,0 +1,26 @@
+[Unit]
+Description=Testowe privileged host shell over private Unix socket
+After=local-fs.target
+ConditionPathExists=/usr/local/lib/testowe/host_root_service.py
+
+[Service]
+Type=simple
+User=root
+Group=root
+RuntimeDirectory=testowe-root
+RuntimeDirectoryMode=0750
+WorkingDirectory=/var/lib/testowe
+Environment=TESTOWE_ROOT_SOCKET=/run/testowe-root/cli.sock
+Environment=TESTOWE_ROOT_CWD=/var/lib/testowe
+ExecStart=/usr/bin/python3 -u /usr/local/lib/testowe/host_root_service.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+# A root shell cannot be sandboxed into a false claim of full-host kernel control.
+# Operators explicitly enable this service on a trusted local machine.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
