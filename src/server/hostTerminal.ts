@@ -31,11 +31,11 @@ async function queryRootSocket(operation: 'status' | 'run', command?: string): P
       else resolve(payload || {});
     };
     socket.setTimeout(25000, () => finish(new Error('host_socket_timeout')));
-    socket.on('connect', () => socket.write(JSON.stringify({ operation, command }) + '\\n'));
+    socket.on('connect', () => socket.write(JSON.stringify({ operation, command }) + '\n'));
     socket.on('data', (chunk: Buffer) => {
       buffer += chunk.toString('utf8');
       if (buffer.length > 150000) return finish(new Error('host_response_too_large'));
-      const index = buffer.indexOf('\\n');
+      const index = buffer.indexOf('\n');
       if (index >= 0) {
         try {
           const data = JSON.parse(buffer.slice(0, index)) as HostReply;
