@@ -1,0 +1,32 @@
+[Unit]
+Description=Testowe SPAA read-only Linux host observation relay
+After=local-fs.target systemd-journald.service
+Wants=systemd-journald.service
+
+[Service]
+Type=simple
+User=debian13
+Group=debian13
+WorkingDirectory=/var/lib/debian13/observations
+Environment=SPAA_HOST_SNAPSHOT_PATH=/var/lib/debian13/observations/host-sphere.json
+Environment=SPAA_HOST_REFRESH_SECONDS=15
+ExecStart=/usr/bin/python3 -u /usr/local/lib/debian13/system/host_collector.py
+Restart=on-failure
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/debian13/observations
+CapabilityBoundingSet=
+AmbientCapabilities=
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target
