@@ -21,6 +21,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
 from systemd_observer import observe_procfs, observe_systemd_services
+from host_collector import read_host_snapshot
+from pathlib import Path
 
 AGENTS = {
     "Aria": ("analysis", "research"),
@@ -38,6 +40,7 @@ PORT = int(os.getenv("AGENT_API_PORT", "8091"))
 BIND = os.getenv("AGENT_API_HOST", "127.0.0.1")
 DB_PATH = os.getenv("AGENT_DB_PATH", "/data/agent_tasks.sqlite3")
 REFRESH_SECONDS = max(5, int(os.getenv("SPAA_REFRESH_SECONDS", "15")))
+HOST_SNAPSHOT_FILE = os.getenv("SPAA_HOST_SNAPSHOT_FILE", "")
 DB_LOCK = threading.RLock()
 MODEL_SEMAPHORE = threading.BoundedSemaphore(1)
 STOP = threading.Event()
@@ -159,13 +162,18 @@ def source_probes():
             entries = db.execute("SELECT status, COUNT(*) AS n FROM tasks GROUP BY status").fetchall()
         return {"counts": {row["status"]: row["n"] for row in entries}}
 
-    return {
+    sources = {
         "ollama.models": tags, "ollama.loaded": running,
         "debian.health": debian_health, "debian.diagnostics": debian_diagnostics,
         "svl.health": backend_health, "tasks.queue": local_tasks,
         "linux.systemd.services": observe_systemd_services,
         "linux.procfs.processes": observe_procfs,
     }
+    if HOST_SNAPSHOT_FILE:
+        sources["linux.host.snapshot"] = lambda: read_host_snapshot(
+            Path(HOST_SNAPSHOT_FILE), max_age_seconds=max(45, REFRESH_SECONDS * 4)
+        )
+    return sources
 
 
 def collect_sphere(probes=None):
