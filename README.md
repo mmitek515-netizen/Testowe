@@ -6,6 +6,31 @@ Webowy panel sterowania SVL i czterema personami AI (Astyria, Aurelius, Alex, Ar
 
 Główny model projektu to `llama3.2-vision:11b` — dla czatu, workerów SPAA i API Debian 13 (tekst + obraz). Start: `bash scripts/start-debian13-ollama-agents.sh llama3.2-vision:11b`. Po uruchomieniu sprawdź `/api/ollama/status`; konfiguracja nie jest równoznaczna z uruchomioną inferencją. Wersja waży około 7,8 GB i wymaga znacznych zasobów.
 
+## Debian 13 Live ISO (KDE Plasma, amd64)
+
+W `debian13/live` znajduje się źródłowy profil **instalowalnego obrazu
+Debian 13 Trixie Live** z KDE, panelem AI Linux i systemowymi narzędziami.
+Nie jest to gotowy, przetestowany plik ISO. Zbudowanie i walidacja w VM
+wciąż wymagają realnego hosta/runnera:
+
+```bash
+bash debian13/live/build-iso.sh --check
+sudo bash debian13/live/build-iso.sh --build
+```
+
+Po instalacji systemu `sudo ai-linux-start` instaluje i uruchamia
+prywatne usługi Linux/SPAA oraz pobiera model Ollama.
+Weryfikacja rzeczywistego pobrania, załadowania i inferencji:
+
+```bash
+bash scripts/verify-ollama-vision-11b.sh --status
+bash scripts/verify-ollama-vision-11b.sh --infer
+```
+
+Drugie polecenie uruchamia rzeczywisty model i zużywa zasoby.
+Dopóki nie ma wyników z hosta, status Ollamy jest **niepotwierdzony**.
+Instrukcje: [docs/DEBIAN13_LIVE_ISO.md](docs/DEBIAN13_LIVE_ISO.md).
+
 ## Integracja Debian 13 System API (2026-11-09)
 
 Przeniesiony z `mmitek515-netizen/Debian_13` moduł `debian13/system` działa jako osobna, prywatna usługa Debiana 13 (Python, SQLite, terminal ograniczony polityką i diagnostyka). Ten moduł **nie jest samodzielnym jądrem ani ukończonym instalatorem ISO**.
