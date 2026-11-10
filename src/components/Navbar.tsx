@@ -4,7 +4,7 @@ import { MashyValue } from './MashyCode';
 
 interface Props {
   activeTab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit' | 'terminal' | 'hyperspace';
-  setActiveTab: (tab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit') => void;
+  setActiveTab: (tab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit' | 'terminal' | 'hyperspace') => void;
   operatorName: string;
   sysVersion: string;
   onOpenAudit: () => void;
