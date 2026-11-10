@@ -1,9 +1,9 @@
 import React from 'react';
-import { ShieldCheck, Activity, Terminal, ShieldAlert, Cpu, MessageSquare, Target } from 'lucide-react';
+import { ShieldCheck, Activity, Terminal, ShieldAlert, Cpu, MessageSquare, Target, Orbit } from 'lucide-react';
 import { MashyValue } from './MashyCode';
 
 interface Props {
-  activeTab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit';
+  activeTab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit' | 'terminal' | 'hyperspace';
   setActiveTab: (tab: 'dashboard' | 'topology' | 'python' | 'chat' | 'missions' | 'audit') => void;
   operatorName: string;
   sysVersion: string;
@@ -18,8 +18,8 @@ export default function Navbar({
   onOpenAudit,
 }: Props) {
   return (
-    <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-cyan-300/15 bg-[#07101e]/95 backdrop-blur-xl">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           
           {/* Logo & System Badge */}
@@ -78,6 +78,14 @@ export default function Navbar({
               <Target className="w-3.5 h-3.5 text-cyan-400" />
               <span>Misje AI (9)</span>
             </button>
+            <button type="button" onClick={() => setActiveTab('terminal')}
+              className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-colors ${activeTab === 'terminal' ? 'bg-cyan-950/70 text-cyan-100 border border-cyan-400/30' : 'text-slate-400 hover:text-cyan-200'}`}>
+              <Terminal className="w-3.5 h-3.5"/> Konsola CLI
+            </button>
+            <button type="button" onClick={() => setActiveTab('hyperspace')}
+              className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-colors ${activeTab === 'hyperspace' ? 'bg-violet-950/60 text-violet-100 border border-violet-400/30' : 'text-slate-400 hover:text-violet-200'}`}>
+              <Orbit className="w-3.5 h-3.5"/> Hiperprzestrzeń 128-bit
+            </button>
             <button
               onClick={() => setActiveTab('topology')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
@@ -114,10 +122,10 @@ export default function Navbar({
           {/* Right Status Badge */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-xs font-mono">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-emerald-300 hidden sm:inline">KERNEL READY</span>
+              <span className="flex h-2 w-2 rounded-full bg-slate-500" />
+              <span className="text-slate-400 hidden sm:inline">STATUS Z API</span>
               <span className="text-neutral-500">|</span>
-              <span className="text-neutral-400">+1456%</span>
+              <span className="text-neutral-400">SVL</span>
             </div>
           </div>
 
@@ -149,6 +157,10 @@ export default function Navbar({
           >
             Misje AI
           </button>
+          <button type="button" onClick={() => setActiveTab('terminal')}
+            className={`px-2.5 py-1 text-xs rounded-md whitespace-nowrap ${activeTab === 'terminal' ? 'bg-cyan-950 text-cyan-100' : 'text-cyan-300'}`}>Terminal CLI</button>
+          <button type="button" onClick={() => setActiveTab('hyperspace')}
+            className={`px-2.5 py-1 text-xs rounded-md whitespace-nowrap ${activeTab === 'hyperspace' ? 'bg-violet-950 text-violet-100' : 'text-violet-300'}`}>HyperOS 128-bit</button>
           <button
             onClick={() => setActiveTab('topology')}
             className={`px-2.5 py-1 text-xs rounded-md whitespace-nowrap ${
