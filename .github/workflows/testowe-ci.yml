@@ -33,6 +33,10 @@ jobs:
           bash -n scripts/start-debian13-ollama-agents.sh
           bash -n scripts/run-codespace-missions.sh
           bash -n scripts/verify-debian13-runtime.sh
+          bash -n scripts/verify-ollama-vision-11b.sh
+          bash -n debian13/live/build-iso.sh
+      - name: Check Debian 13 Live ISO configuration (no large image build)
+        run: bash debian13/live/build-iso.sh --check
       - name: Compose syntax without starting services
         env:
           DEBIAN13_API_TOKEN: ci-placeholder-token-at-least-32-characters-long
