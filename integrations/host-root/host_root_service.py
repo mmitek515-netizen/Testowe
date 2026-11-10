@@ -27,6 +27,16 @@ class CommandHandler(socketserver.StreamRequestHandler):
         try:
             raw = self.rfile.readline(MAX_INPUT * 2 + 1)
             request = json.loads(raw)
+            if request.get("operation") == "status":
+                self.wfile.write(json.dumps({
+                    "uid": os.geteuid(),
+                    "isRoot": os.geteuid() == 0,
+                    "scope": "linux-host-root",
+                    "cwd": WORKDIR,
+                    "executable": "/bin/bash",
+                    "interactivePty": False
+                }).encode() + b"\n")
+                return
             cmd = request.get("command")
             if not isinstance(cmd, str) or not cmd.strip() or len(cmd) > MAX_INPUT or "\0" in cmd:
                 raise ValueError("invalid_command")
@@ -100,6 +110,8 @@ def main():
         os.unlink(SOCKET)
     with Server(SOCKET, CommandHandler) as server:
         group = __import__("grp").getgrnam("testowe-cli").gr_gid
+        os.chown(folder, 0, group)
+        os.chmod(folder, 0o750)
         os.chown(SOCKET, 0, group)
         os.chmod(SOCKET, 0o660)
         print("Testowe root host Unix socket ready", flush=True)
