@@ -32,8 +32,8 @@ async function apiJson(url: string, token: string, command?: string): Promise<an
 }
 
 function shellSuggestion(text: string): string {
-  const fence = text.match(new RegExp('```(?:bash|sh|shell)?\\s*([\\s\\S]*?)```', 'i'));
-  return (fence?.[1] || text).trim().replace(/^\\$\\s*/, '').trim();
+  const fence = text.match(new RegExp('```(?:bash|sh|shell)?\s*([\s\\S]*?)```', 'i'));
+  return (fence?.[1] || text).trim().replace(/^\$\s*/, '').trim();
 }
 
 export default function HostTerminal({ hyperspace = false }: { hyperspace?: boolean }) {
@@ -95,7 +95,7 @@ export default function HostTerminal({ hyperspace = false }: { hyperspace?: bool
         'Nie twierdź, że kod został wykonany. Nie fałszuj wyniku.',
         'Przy niejasnym poleceniu wybierz diagnostykę tylko do odczytu.',
         'Zadanie: ' + instruction,
-      ].join('\\n');
+      ].join('\n');
       const response = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ personaId: 'alex', message: prompt, provider, stream: false, history: [] }),
