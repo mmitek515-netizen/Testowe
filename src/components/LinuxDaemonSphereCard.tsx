@@ -4,6 +4,7 @@ import { MashyValue } from './MashyCode';
 
 type Sensor = {
   connected: boolean;
+  origin?: 'linux-host' | 'observer-process-namespace' | 'unavailable';
   scope?: string;
   observedAt?: string;
   total?: number;
@@ -16,6 +17,8 @@ type LinuxSphere = {
   state: 'online' | 'partial' | 'offline';
   sphereId: string | null;
   observedAt?: string;
+  hostBridge?: 'fresh' | 'stale-or-unavailable' | 'not-configured';
+  hostSnapshotId?: string | null;
   services: Sensor;
   processes: Sensor;
   note?: string;
@@ -57,6 +60,7 @@ export default function LinuxDaemonSphereCard() {
   const services = sphere?.services;
   const processes = sphere?.processes;
   const ready = services?.connected === true;
+  const hostVisible = services?.origin === 'linux-host';
   const selectedView = views.find(x => x.key === selected) || views[0];
   return (
     <section aria-label="Sfera wszystkich widocznych demonów Linuxa"
@@ -66,7 +70,7 @@ export default function LinuxDaemonSphereCard() {
           <ServerCog size={18} />
           Sfera demonów Linux / systemd
           <span className={ready ? 'text-emerald-300 text-xs' : 'text-amber-300 text-xs'}>
-            {ready ? 'OBSERWATOR ONLINE' : 'NIEPOTWIERDZONE'}
+            {ready ? (hostVisible ? 'HOST LINUX ONLINE' : 'ODCZYT LOKALNY') : 'NIEPOTWIERDZONE'}
           </span>
         </div>
         <button type="button" disabled={loading} onClick={() => { void refresh(); }}
@@ -78,6 +82,7 @@ export default function LinuxDaemonSphereCard() {
       <p className="text-xs text-slate-400">
         Każda wykryta usługa systemd jest osobnym węzłem obserwacyjnym w jednej wspólnej sferze SPAA.
         Czujniki działają równolegle, bez zatrzymywania lub modyfikowania demonów Linuxa.
+        {' '}Źródło: {hostVisible ? 'rzeczywisty host systemd' : services?.connected ? 'przestrzeń obserwatora / kontener' : 'brak potwierdzenia hosta'}.
       </p>
       <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
         {views.map(view => (
@@ -104,6 +109,7 @@ export default function LinuxDaemonSphereCard() {
           <span>Procesy widoczne w przestrzeni PID: {processes?.connected && processes.total !== undefined ?
             <MashyValue value={processes.total} /> : 'nieodczytane'}</span>
           <span>Sfera: {sphere?.sphereId ? <MashyValue value={sphere.sphereId.slice(0, 8)} /> : 'brak'}</span>
+          <span>Most hosta: {sphere?.hostBridge === 'fresh' ? 'aktualny' : sphere?.hostBridge === 'stale-or-unavailable' ? 'nieaktualny / niedostępny' : 'niepodłączony'}</span>
           <span>Próbka: {sphere?.observedAt ?
             <MashyValue value={new Date(sphere.observedAt).toLocaleTimeString('pl-PL')} /> : 'brak'}</span>
         </div>
@@ -112,9 +118,9 @@ export default function LinuxDaemonSphereCard() {
         <p className="text-xs text-amber-300">Wykaz jest ograniczony limitem węzłów; licznik obejmuje wszystkie znalezione wpisy.</p>
       ) : null}
       <p className="text-xs text-slate-500">
-        {error || (ready ? 'systemd: źródło dostępne.' :
-          'systemd: brak potwierdzonego połączenia z menedżerem usług hosta.')}
-        {' '}Odczyt /proc dotyczy przestrzeni PID procesu obserwatora, więc w Dockerze może pokazywać tylko kontener.
+        {error || (hostVisible ? 'Odczyt hostowego systemd potwierdzony świeżą próbką.' :
+          'Brak potwierdzonego odczytu hostowego systemd; wynik może pochodzić wyłącznie z kontenera.')}
+        {' '}Procesy: {processes?.origin === 'linux-host' ? 'host Linux' : 'lokalna przestrzeń PID obserwatora'}.
         Wspólny stan nie zmienia kodu ani uprawnień natywnych demonów.
       </p>
     </section>
