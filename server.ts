@@ -177,14 +177,29 @@ app.get('/api/spaa/linux', async (_req, res) => {
     if (!sphere || sphere.state !== 'collected' || !Array.isArray(sphere.observations)) {
       throw new Error('no_sphere');
     }
-    const summarize = (source: string) => {
+    // A validated, fresh host snapshot takes priority over Docker PID-namespace
+    // data. Never relabel the container's local /proc as a host-wide view.
+    const hostObservation = sphere.observations.find(
+      (o: any) => o.source === 'linux.host.snapshot'
+    );
+    const hostData = hostObservation?.ok && hostObservation.data?.scope === 'linux-host-collector'
+      ? hostObservation.data : null;
+    const summarize = (source: string, hostKey: 'systemd' | 'procfs') => {
+      const hostEntry = hostData?.sources?.[hostKey];
+      const useHost = hostEntry?.ok === true && hostEntry.data &&
+        typeof hostEntry.data === 'object';
       const observation = sphere.observations.find((o: any) => o.source === source);
-      if (!observation?.ok || !observation.data) {
-        return { connected: false, error: observation?.error || 'source_not_observed' };
+      const data = useHost ? hostEntry.data : (observation?.ok ? observation.data : null);
+      if (!data) {
+        return {
+          connected: false, origin: 'unavailable',
+          error: hostEntry?.error || observation?.error ||
+            hostObservation?.error || 'source_not_observed'
+        };
       }
-      const data = observation.data;
       return {
-        connected: true, scope: String(data.scope || ''),
+        connected: true, origin: useHost ? 'linux-host' : 'observer-process-namespace',
+        scope: String(data.scope || ''),
         observedAt: String(data.observedAt || ''),
         total: Math.max(0, Number(data.total) || 0),
         truncated: data.truncated === true,
@@ -197,15 +212,18 @@ app.get('/api/spaa/linux', async (_req, res) => {
         unreadable: Math.max(0, Number(data.unreadable) || 0),
       };
     };
-    const services = summarize('linux.systemd.services');
-    const processes = summarize('linux.procfs.processes');
+    const services = summarize('linux.systemd.services', 'systemd');
+    const processes = summarize('linux.procfs.processes', 'procfs');
     return res.json({
       state: services.connected && processes.connected ? 'online' :
         services.connected || processes.connected ? 'partial' : 'offline',
       sphereId: sphere.sphereId, observedAt: sphere.observedAt,
       services, processes,
+      hostBridge: hostData ? 'fresh' :
+        hostObservation?.ok === false ? 'stale-or-unavailable' : 'not-configured',
+      hostSnapshotId: hostData?.snapshotId || null,
       topology: 'shared-sphere-read-only',
-      note: 'Systemd units are individually represented in the internal sphere. Procfs is scoped to the running process namespace; neither source changes native Linux daemons.'
+      note: 'Only origin=linux-host proves that the separate host collector was observed. Container-local process data is labeled separately. No native Linux daemon is modified.'
     });
   } catch {
     return res.status(503).json({
