@@ -381,19 +381,87 @@ def finish_task(task_id, state, result=None, error=None):
                    (state, result, error, now(), task_id))
 
 
+def compact_sphere_context(sphere):
+    """Keep ALL sensor statuses, but bound detailed service lists in AI prompts.
+
+    The unabridged per-daemon observations remain in the authenticated
+    persistent sphere. A prompt is not the authoritative source of truth.
+    """
+    brief = {
+        "state": sphere.get("state"),
+        "sphereId": sphere.get("sphereId"),
+        "observedAt": sphere.get("observedAt"),
+        "sourceCount": sphere.get("sourceCount", 0),
+        "observations": [],
+    }
+    for observation in sphere.get("observations", []):
+        entry = {
+            "source": observation.get("source"),
+            "ok": observation.get("ok") is True,
+            "observedAt": observation.get("observedAt"),
+        }
+        if not entry["ok"]:
+            entry["error"] = observation.get("error")
+        else:
+            data = observation.get("data")
+            if entry["source"] == "linux.host.snapshot" and isinstance(data, dict):
+                entry["data"] = {
+                    "snapshotId": data.get("snapshotId"),
+                    "observedAt": data.get("observedAt"),
+                    "scope": data.get("scope"),
+                    "sources": {
+                        name: ({
+                            "ok": item.get("ok"),
+                            "error": item.get("error"),
+                            "total": item.get("data", {}).get("total"),
+                            "counts": item.get("data", {}).get("counts"),
+                            "truncated": item.get("data", {}).get("truncated"),
+                        } if isinstance(item, dict) and isinstance(item.get("data"), dict)
+                        else {"ok": item.get("ok"), "error": item.get("error")}
+                        if isinstance(item, dict) else {"ok": False})
+                        for name, item in data.get("sources", {}).items()
+                        if name in ("systemd", "procfs")
+                    },
+                }
+            elif entry["source"] in ("linux.systemd.services", "linux.procfs.processes") and isinstance(data, dict):
+                entry["data"] = {
+                    key: data.get(key) for key in (
+                        "scope", "total", "counts", "truncated", "unreadable"
+                    ) if key in data
+                }
+            elif isinstance(data, dict):
+                # This is a compact view: only supported scalar/compact fields.
+                entry["data"] = {
+                    key: value for key, value in data.items()
+                    if isinstance(value, (str, bool, int, float))
+                    and len(str(value)) <= 200
+                }
+            else:
+                entry["data"] = None
+        brief["observations"].append(entry)
+    return brief
+
+
 def answer_task(task):
     sphere = read_sphere(task.get("sphereId"))
     peers = peer_context(task["agent"])
+    shared_view = compact_sphere_context(sphere)
     if task["kind"] == "diagnostics":
-        # Different executor implementation: deterministic diagnostics, NO model call.
-        return json.dumps({"kind": "diagnostics", "sphere": sphere, "peerMessages": peers},
-                          ensure_ascii=False)[:32000]
+        # Deterministic, well-formed JSON even when the full sphere is large.
+        return json.dumps({"kind": "diagnostics", "sphere": shared_view,
+                           "peerMessages": peers[-6:]}, ensure_ascii=False)
     prompt = {
         "analysis": "Analyze the user request based on the observable system state.",
         "research": "Research only the attached observations. You have no browser or web access.",
         "integration": "Analyze integration steps; do not claim to execute commands or alter files.",
     }[task["kind"]]
-    context = json.dumps({"sphere": sphere, "peerReports": peers}, ensure_ascii=False)[:12000]
+    concise_reports = [
+        {"sender": item["sender"], "kind": item["kind"],
+         "sphereId": item["sphereId"], "body": item["body"][:200]}
+        for item in peers[-6:]
+    ]
+    context = json.dumps({"sphere": shared_view, "peerReports": concise_reports},
+                         ensure_ascii=False)
     payload = json.dumps({
         "model": MODEL, "stream": False,
         "messages": [
