@@ -31,7 +31,9 @@ for module in server.py work_store.py original_agents.py alex_bridge.py alex_han
 done
 install -o root -g root -m 0644 "$SPAA_SOURCE" /usr/local/lib/debian13/system/spaa_daemon.py
 install -o root -g root -m 0644 "$SOURCE_DIR/../../integrations/agent-rest/systemd_observer.py" /usr/local/lib/debian13/system/systemd_observer.py
+install -o root -g root -m 0644 "$SOURCE_DIR/../../integrations/agent-rest/host_collector.py" /usr/local/lib/debian13/system/host_collector.py
 install -d -o debian13 -g debian13 -m 0750 /var/lib/debian13/workspace
+install -d -o debian13 -g debian13 -m 0750 /var/lib/debian13/observations
 install -d -o root -g debian13 -m 0750 /etc/debian13
 
 if [ ! -e /etc/debian13/system.env ]; then
@@ -54,9 +56,12 @@ install -o root -g root -m 0644 "$SOURCE_DIR/systemd/debian13-system.service" \
   /etc/systemd/system/debian13-system.service
 install -o root -g root -m 0644 "$SOURCE_DIR/systemd/testowe-spaa.service" \
   /etc/systemd/system/testowe-spaa.service
+install -o root -g root -m 0644 "$SOURCE_DIR/systemd/testowe-host-observer.service" \
+  /etc/systemd/system/testowe-host-observer.service
 systemctl daemon-reload
-systemctl enable --now debian13-system.service testowe-spaa.service
+systemctl enable --now debian13-system.service testowe-spaa.service testowe-host-observer.service
 
 echo "Debian 13 platform API and SPAA daemon installed."
 echo "Local API: http://127.0.0.1:8080; SPAA: http://127.0.0.1:8091"
+echo "Host sphere: /var/lib/debian13/observations/host-sphere.json (local telemetry, private permissions)"
 echo "Keep /etc/debian13/system.env private."
